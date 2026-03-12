@@ -1,0 +1,30 @@
+# Node modules
+node_modules/
+**/node_modules/
+
+# Python 가상환경
+backend/venv/
+backend/.venv/
+__pycache__/
+*.py[cod]
+
+# OS 관련 파일
+.DS_Store
+Thumbs.db
+
+# 배포/빌드 결과물
+frontend/android/build/
+frontend/ios/build/
+frontend/ios/DerivedData/
+*.log
+
+# OS/IDE
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+
+# 환경변수 (보안)
+.env
+.env.local
+.env.development.local
