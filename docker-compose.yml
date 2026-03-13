@@ -1,0 +1,29 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: tikkle_mysql
+    restart: always
+    env_file:
+      - ./.env  # .env 파일에서 변수 읽어오기
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql_data:/var/lib/mysql
+
+  api:
+    build: ./backend
+    container_name: tikkle_api
+    restart: always
+    env_file:
+      - ./.env  # 백엔드 서버도 DB 비번을 알아야 하니 연동
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/src
+    depends_on:
+      - db
