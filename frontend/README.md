@@ -6,14 +6,15 @@
 
 1. [기술 스택] - 버전 확인 등
 2. [API 통신 규약]
-3. [모바일 실시간 테스트]
-4. [환경 설정 (IP 주소)]
-5. [개발 시작]
+3. [UI/UX 구현 표준 가이드]
+4. [모바일 실시간 테스트]
+5. [환경 설정 (IP 주소)]
+6. [개발 시작]
 
 ---
 
 
-## 기술 스택
+## 1. 기술 스택
 
 - **Framework**: Expo SDK 54 (React Native)
 - **Language**: JavaScript (ES6+)
@@ -23,7 +24,7 @@
 - **Navigation**: React Navigation (화면 전환용)
 
 
-## API 통신 규약
+## 2. API 통신 규약
 공통 엔진(`apiClient`)을 사용하여 통신함.
 
 1. **위치**: `src/common/api/`
@@ -54,7 +55,14 @@ const getMyFridgeList = async () => {
 ----------------------------------------------------
 ```
 
-## 환경 설정 (IP 주소)
+
+## 3. UI/UX 구현 표준 가이드
+- 샘플 스크린 확인 (위치: `src/domains/SampleScreen.js`)
+- `SafeAreaView`를 사용한 노치 대응과 공용 헤더와 푸터 적용 방법 예시
+
+
+
+## 4. 환경 설정 (IP 주소)
 장소(집, 학원 등)를 옮길 때마다 IP를 수정해야 함.
 
 1. **위치**: 최상위 폴더(TIKKLE_APP)의 `.env` 파일
@@ -66,7 +74,7 @@ const getMyFridgeList = async () => {
 
 
 
-## 모바일 실시간 테스트
+## 5. 모바일 실시간 테스트
 
 **Expo Go** 앱을 통해 실제 스마트폰에서 즉시 구동 확인이 가능하게 설계함. 
 
@@ -77,9 +85,8 @@ const getMyFridgeList = async () => {
 3. **주의사항**: 반드시 PC와 스마트폰이 반드시 같은 와이파이에 연결되어 있어야 함.
 
 
-## 개발 시작
+## 6. 개발 시작
 <!-- bash: "터미널에 입력하는 명령어" 라는 뜻 -->
-<!-- 초기: 모바일 화면에 Open up App.js to start working on your app! 뜨면 정상 -->
 ```bash
 cd frontend
 npm install
