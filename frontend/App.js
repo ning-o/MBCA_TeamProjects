@@ -14,13 +14,8 @@ export default function App() {
     <SafeAreaProvider>
       <NavigationContainer>
         <Stack.Navigator initialRouteName="Home" screenOptions={{ headerShown: false }}>
-          {/* 메인 홈(현재 샘플로 대체) */}
           <Stack.Screen name="Home" component={SampleScreen} />
-          
-          {/* 냉장고 도메인 */}
           <Stack.Screen name="Fridge" component={FridgeRouter} />
-          
-          {/* 구독 도메인 */}
           <Stack.Screen name="Subs" component={SubsRouter} />
         </Stack.Navigator>
       </NavigationContainer>
