@@ -1,10 +1,9 @@
-// [공용 헤더 컴포넌트]
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Header = () => {
-  const insets = useSafeAreaInsets();
+  const insets = useSafeAreaInsets(); // 이제 센터(App.js)가 있어서 에러 안 남!
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -17,7 +16,7 @@ const Header = () => {
         {/* 중앙: 로고 */}
         <Text style={styles.brandText}>TIKKLE</Text>
 
-        {/* 오른쪽: 알림or설정 추후 필요하다면 추가할 수 있게 레이아웃만 잡아놓은 상태 */}
+        {/* 오른쪽: 알림 */}
         <TouchableOpacity style={styles.sideButton}>
           {/* <Text style={styles.iconText}>{"🔔"}</Text> */}
         </TouchableOpacity>
@@ -44,7 +43,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
   },
-  brandText: { fontSize: 22, fontWeight: '900', color: '#35A2E3' },
+  brandText: { fontSize: 22, fontWeight: '900', color: '#3B82F6' },
   iconText: { fontSize: 20, color: '#333' },
   sideButton: { width: 40, alignItems: 'center' }
 });

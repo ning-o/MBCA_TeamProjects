@@ -13,6 +13,7 @@ import Footer from '../common/components/Footer';
 
 const SampleScreen = () => {
   return (
+    // 최상단 컨테이너 (헤더/푸터가 개별 여백을 잡으므로 일반 View 사용 추천)
     <View style={styles.container}>
       {/* [고정] 공용 헤더 사용 */}
       <Header/>

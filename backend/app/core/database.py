@@ -1,9 +1,3 @@
-# FastAPI와 MySQL 데이터베이스를 연결하고, 세션을 관리하는 핵심 파일
-# 주요 기능
-# 1. DB 연결 재시도: 도커 환경에서 DB 서버가 늦게 켜질 경우를 대비해 5회 재접속 시도
-# 2. 세션 관리: API 요청이 들어올 때 DB 연결, 끝나면 자동으로 연결 종료.
-# 3. 모델 베이스 생성: 앞으로 만들 모든 DB 테이블의 기초 뼈대를 정의
-
 import os
 import time
 from sqlalchemy import create_engine
