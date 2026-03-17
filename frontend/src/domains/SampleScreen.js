@@ -5,7 +5,6 @@
  */
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native'; 
-import { SafeAreaView } from 'react-native-safe-area-context';
 // SafeAreaView: 폰의 "노치" (카메라 구멍, 하단 홈바 영역 등)을 자동으로 피해주는 라이브러리
 
 // 공용 헤더 & 푸터 불러오기
@@ -14,8 +13,8 @@ import Footer from '../common/components/Footer';
 
 const SampleScreen = () => {
   return (
-    /* 최상단을 SafeAreaView로 감싸서 노치 기강을 잡습니다 */
-    <SafeAreaView style={styles.container}>
+    // 최상단 컨테이너 (헤더/푸터가 개별 여백을 잡으므로 일반 View 사용 추천)
+    <View style={styles.container}>
       {/* [고정] 공용 헤더 사용 */}
       <Header/>
 
@@ -25,27 +24,30 @@ const SampleScreen = () => {
         <Text style={styles.infoText}>프론트엔드 테스트 글입니다.</Text>
 
         {/* "View" 태그문은 웹의 div & section 같은 영역 태그문임 */}
-        <View style={styles.box}><Text>글이 보이면 정상입니다.</Text></View>
+        <View style={styles.box}>
+          <Text>글이 보이면 정상입니다.</Text>
+        </View>
       </View>
       {/* [FREE ZONE]========================= */}
 
       {/* [고정] 공용 푸터 사용 */}
       <Footer />
-    </SafeAreaView>
+    </View>
   );
 };
 
-// 스타일은 스타일시트를 쓰든, 외부 스타일 파일을 쓰든 마음대로
+// 스타일 가이드 표준
 const styles = StyleSheet.create({
-  container: {
+  container: { 
     flex: 1, // 전체 화면 꽉 채우기
-    backgroundColor: '#fff',
+    backgroundColor: '#fff' 
   },
-  content: {
+  content: { 
     flex: 1, // 헤더와 푸터 제외한 남은 모든 공간 차지
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 100, // 푸터(absolute)에 가려짐 방지용 패딩
+    justifyContent: 'center', 
+    alignItems: 'center' 
   },
   infoText: {
     fontSize: 18,

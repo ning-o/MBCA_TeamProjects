@@ -1,48 +1,90 @@
-// [공용] 푸터 - 메뉴 버튼 레이아웃 표준
+// src/common/components/Footer.js
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Home, Wallet, Refrigerator, User } from 'lucide-react-native';
 
 const Footer = () => {
+  const insets = useSafeAreaInsets();
+
   return (
-    <View style={styles.footer}>
-      {/* 각 메뉴를 클릭 가능한 버튼 영역으로 분리 */}
+    // position: 'absolute'를 주어 화면 어디서든 바닥에 고정 됨
+    <View style={[
+      styles.footer, 
+      { 
+        paddingBottom: insets.bottom > 0 ? insets.bottom : 20, // 노치 유무에 따른 하단 여백
+        height: insets.bottom > 0 ? 85 + insets.bottom : 85   // 전체 높이 최적화
+      }
+    ]}>
+      
       <TouchableOpacity style={styles.menuButton}>
-        <Text style={styles.menuText}>홈</Text>
+        <View style={[styles.iconCircle, styles.activeCircle]}>
+          <Home size={24} color="#3B82F6" strokeWidth={2.5} />
+        </View>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.menuButton}>
-        <Text style={styles.menuText}>구독 관리</Text>
+        <View style={styles.iconCircle}>
+          <Wallet size={24} color="#94A3B8" strokeWidth={2} />
+        </View>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.menuButton}>
-        <Text style={styles.menuText}>냉장고 관리</Text>
+        <View style={styles.iconCircle}>
+          <Refrigerator size={24} color="#94A3B8" strokeWidth={2} />
+        </View>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.menuButton}>
-        <Text style={styles.menuText}>내정보</Text>
+        <View style={styles.iconCircle}>
+          <User size={24} color="#94A3B8" strokeWidth={2} />
+        </View>
       </TouchableOpacity>
+
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   footer: {
-    height: 100, // 높이를 살짝 키워 터치 영역 확보
-    flexDirection: 'row', // 가로로 버튼 나열
+    position: 'absolute', // 화면 하단에 고정
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
     backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingBottom: 20, // 아이폰 하단 바 영역 고려
+    borderTopColor: '#F3F4F6',
+    zIndex: 1000,
+    // 그림자 효과
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.05,
+        shadowRadius: 5,
+      },
+      android: {
+        elevation: 20,
+      },
+    }),
   },
   menuButton: {
-    flex: 1, // 4개 버튼이 똑같은 넓이를 가짐
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 10, // 아이콘을 살짝 위로 정렬
+  },
+  iconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: 'transparent', // 평소엔 투명하게
     justifyContent: 'center',
     alignItems: 'center',
   },
-  menuText: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '600',
+  activeCircle: {
+    backgroundColor: '#EBF2FF', // 활성화된 버튼만 블루 배경
   },
 });
 

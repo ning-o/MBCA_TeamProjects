@@ -1,39 +1,51 @@
-// [공용] 헤더 - 브랜드 로고 및 텍스트 고정 레이아웃
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const Header = () => { 
+const Header = () => {
+  const insets = useSafeAreaInsets(); // 이제 센터(App.js)가 있어서 에러 안 남!
+
   return (
-    <View style={styles.header}>
-      {/* 왼쪽: 브랜드 텍스트 로고 */}
-      <Text style={styles.brandText}>TIKKLE(헤더 영역)</Text>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <View style={styles.headerContent}>
+        {/* 왼쪽: 뒤로가기 */}
+        <TouchableOpacity style={styles.sideButton}>
+          <Text style={styles.iconText}>{"<"}</Text>
+        </TouchableOpacity>
 
+        {/* 중앙: 로고 */}
+        <Text style={styles.brandText}>TIKKLE</Text>
+
+        {/* 오른쪽: 알림 */}
+        <TouchableOpacity style={styles.sideButton}>
+          {/* <Text style={styles.iconText}>{"🔔"}</Text> */}
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  header: {
-    height: 120,              // 헤더 높이
-    width: '100%',
-    backgroundColor: '#fff', 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'flex-end',  // 글자를 헤더 박스의 '바닥' 쪽으로 붙이기.
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 15,       // 바닥에서 살짝 띄우기.
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-
+  container: {
+    position: 'absolute', // 상단 고정
+    top: 0, left: 0, right: 0,
+    backgroundColor: '#fff',
+    zIndex: 1000,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
   },
-  brandText: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#FFD700',       
-    letterSpacing: 1.5,
+  headerContent: {
+    height: 56,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
   },
-
+  brandText: { fontSize: 22, fontWeight: '900', color: '#3B82F6' },
+  iconText: { fontSize: 20, color: '#333' },
+  sideButton: { width: 40, alignItems: 'center' }
 });
 
 export default Header;
