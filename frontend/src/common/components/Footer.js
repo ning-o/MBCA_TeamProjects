@@ -2,10 +2,13 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Home, Wallet, Refrigerator, User } from 'lucide-react-native';
 
 const Footer = () => {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation(); // 네비게이션 함수 생성
+  const route = useRoute(); // 현재 어떤 화면인지 파악
 
   return (
     // position: 'absolute'를 주어 화면 어디서든 바닥에 고정 됨
@@ -17,24 +20,37 @@ const Footer = () => {
       }
     ]}>
       
-      <TouchableOpacity style={styles.menuButton}>
+      {/* 홈 버튼 */}
+      <TouchableOpacity 
+        style={styles.menuButton}
+        onPress={() => navigation.navigate('Home')}
+      >
         <View style={[styles.iconCircle, styles.activeCircle]}>
           <Home size={24} color="#3B82F6" strokeWidth={2.5} />
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.menuButton}>
+      {/* 구독 관리 버튼 */}
+      <TouchableOpacity 
+        style={styles.menuButton}
+        onPress={() => navigation.navigate('Subs')}
+      >
         <View style={styles.iconCircle}>
           <Wallet size={24} color="#94A3B8" strokeWidth={2} />
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.menuButton}>
+      {/* 냉장고 관리 버튼 */}
+      <TouchableOpacity 
+        style={styles.menuButton}
+        onPress={() => navigation.navigate('Fridge')}
+      >
         <View style={styles.iconCircle}>
           <Refrigerator size={24} color="#94A3B8" strokeWidth={2} />
         </View>
       </TouchableOpacity>
 
+      {/* 마이페이지 버튼 */}
       <TouchableOpacity style={styles.menuButton}>
         <View style={styles.iconCircle}>
           <User size={24} color="#94A3B8" strokeWidth={2} />
