@@ -1,48 +1,130 @@
-// [공용] 푸터 - 메뉴 버튼 레이아웃 표준
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Home, Wallet, Refrigerator, User } from 'lucide-react-native';
+
+const BRAND = {
+  DEEP: '#033169',
+  MAIN: '#0665B8',
+  BRIGHT: '#35A2E3',
+  LIGHT: '#F0F7FF',
+  INACTIVE: '#94A3B8',
+};
 
 const Footer = () => {
+  const insets = useSafeAreaInsets();
+  const [activeTab, setActiveTab] = useState('home');
+
+  const getTabStyle = (tabName) => {
+    const isActive = activeTab === tabName;
+    return {
+      circleStyle: [
+        styles.iconCircle,
+        isActive && styles.activeCircle,
+        isActive && styles.activeShadow
+      ],
+      iconColor: isActive ? BRAND.MAIN : BRAND.INACTIVE,
+      strokeWidth: isActive ? 2.5 : 2
+    };
+  };
+
   return (
-    <View style={styles.footer}>
-      {/* 각 메뉴를 클릭 가능한 버튼 영역으로 분리 */}
-      <TouchableOpacity style={styles.menuButton}>
-        <Text style={styles.menuText}>홈</Text>
+    <View style={[styles.footer, { paddingBottom: insets.bottom > 0 ? insets.bottom : 20, height: insets.bottom > 0 ? 85 + insets.bottom : 85 }]}>
+      
+      {/* 1번 영역: 홈 - 공통 */}
+      <TouchableOpacity 
+        style={styles.menuButton} 
+        onPress={() => setActiveTab('home')}
+      >
+        <View style={getTabStyle('home').circleStyle}>
+          <Home size={24} color={getTabStyle('home').iconColor} strokeWidth={getTabStyle('home').strokeWidth} />
+        </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.menuButton}>
-        <Text style={styles.menuText}>구독 관리</Text>
+      {/* 2번 영역: 구독 관리 */}
+      <TouchableOpacity 
+        style={styles.menuButton} 
+        onPress={() => setActiveTab('wallet')}
+      >
+        <View style={getTabStyle('wallet').circleStyle}>
+          <Wallet size={24} color={getTabStyle('wallet').iconColor} strokeWidth={getTabStyle('wallet').strokeWidth} />
+        </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.menuButton}>
-        <Text style={styles.menuText}>냉장고 관리</Text>
+      {/* 3번 영역: 냉장고 관리 */}
+      <TouchableOpacity 
+        style={styles.menuButton} 
+        onPress={() => setActiveTab('fridge')}
+      >
+        <View style={getTabStyle('fridge').circleStyle}>
+          <Refrigerator size={24} color={getTabStyle('fridge').iconColor} strokeWidth={getTabStyle('fridge').strokeWidth} />
+        </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.menuButton}>
-        <Text style={styles.menuText}>내정보</Text>
+      {/* 4번 영역: 마이페이지 */}
+      <TouchableOpacity 
+        style={styles.menuButton} 
+        onPress={() => setActiveTab('user')}
+      >
+        <View style={getTabStyle('user').circleStyle}>
+          <User size={24} color={getTabStyle('user').iconColor} strokeWidth={getTabStyle('user').strokeWidth} />
+        </View>
       </TouchableOpacity>
+
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   footer: {
-    height: 100, // 높이를 살짝 키워 터치 영역 확보
-    flexDirection: 'row', // 가로로 버튼 나열
+    position: 'absolute', // 바닥 고정
+    bottom: 0, 
+    left: 0, 
+    right: 0,
+    flexDirection: 'row',
     backgroundColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: '#eee',
-    paddingBottom: 20, // 아이폰 하단 바 영역 고려
+    borderTopColor: '#F3F4F6',
+    zIndex: 1000,
+    elevation: 20,
+    ...Platform.select({
+      ios: { 
+        shadowColor: '#000', 
+        shadowOffset: { width: 0, height: -3 }, 
+        shadowOpacity: 0.05, 
+        shadowRadius: 5 
+      },
+    }),
   },
-  menuButton: {
-    flex: 1, // 4개 버튼이 똑같은 넓이를 가짐
-    justifyContent: 'center',
-    alignItems: 'center',
+  menuButton: { 
+    flex: 1, 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    paddingTop: 10 
   },
-  menuText: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '600',
+  iconCircle: { 
+    width: 54, 
+    height: 54, 
+    borderRadius: 27, 
+    backgroundColor: 'transparent', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  activeCircle: { 
+    backgroundColor: BRAND.LIGHT 
+  },
+  activeShadow: {
+    ...Platform.select({
+      ios: { 
+        shadowColor: BRAND.DEEP, 
+        shadowOffset: { width: 0, height: 4 }, 
+        shadowOpacity: 0.15, 
+        shadowRadius: 6 
+      },
+      android: { 
+        elevation: 6 
+      },
+    }),
   },
 });
 
