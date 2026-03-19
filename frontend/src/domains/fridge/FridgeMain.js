@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
 
@@ -69,6 +70,13 @@ const FridgeMainScreen = () => {
         <View style={styles.cardGrid}>
           <View style={styles.row}>
             <MenuCard title="한달 식비 입력" value={monthlyBudget} unit="만원" sub={`${spentAmount}만원 사용`} />
+            {/* <TouchableOpacity 
+              style={{ flex: 1 }} 
+              onPress={() => {
+                console.log("영수증 추가 버튼 클릭됨!"); // 작동 확인용 로그
+                navigation.navigate('FridgeDetail'); // 페이지 연결
+              }}
+            ></TouchableOpacity> */}
             <MenuCard title="장본 재료 추가하기" icon="📸" value="영수증 추가" isAction />
           </View>
           <View style={styles.row}>
