@@ -53,7 +53,7 @@ const FridgeMainScreen = () => {
               <Text style={styles.subText}>1일</Text>
               <Text style={styles.subText}>15일</Text>
               <Text style={styles.subText}>30일</Text>
-            </View>
+            </View>   
           </View>
 
           {/* 하단 텍스트 정보 */}
@@ -86,8 +86,7 @@ const FridgeMainScreen = () => {
               value="영수증 추가" 
               onPress={() => {
                 console.log("영수증 추가 버튼 클릭!");
-
-              }}
+              }} 
             />
           </View>
 
