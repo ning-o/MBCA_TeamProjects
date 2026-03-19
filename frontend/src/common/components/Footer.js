@@ -1,22 +1,23 @@
-// src/common/components/Footer.js
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { Home, Wallet, Refrigerator, User } from 'lucide-react-native';
+import { Home, Wallet, Refrigerator as FridgeIcon, User } from 'lucide-react-native';
 
 const Footer = () => {
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation(); // 네비게이션 함수 생성
-  const route = useRoute(); // 현재 어떤 화면인지 파악
+  const navigation = useNavigation();
+  const route = useRoute(); // 1. 현재 화면의 이름을 실시간으로 파악합니다.
+
+  // 2. 현재 화면이 버튼의 목적지와 같은지 확인하는 함수
+  const isActive = (screenName) => route.name === screenName;
 
   return (
-    // position: 'absolute'를 주어 화면 어디서든 바닥에 고정 됨
     <View style={[
       styles.footer, 
       { 
-        paddingBottom: insets.bottom > 0 ? insets.bottom : 20, // 노치 유무에 따른 하단 여백
-        height: insets.bottom > 0 ? 85 + insets.bottom : 85   // 전체 높이 최적화
+        paddingBottom: insets.bottom > 0 ? insets.bottom : 20,
+        height: insets.bottom > 0 ? 85 + insets.bottom : 85 
       }
     ]}>
       
@@ -25,8 +26,12 @@ const Footer = () => {
         style={styles.menuButton}
         onPress={() => navigation.navigate('Home')}
       >
-        <View style={[styles.iconCircle, styles.activeCircle]}>
-          <Home size={24} color="#3B82F6" strokeWidth={2.5} />
+        <View style={[styles.iconCircle, isActive('Home') && styles.activeCircle]}>
+          <Home 
+            size={24} 
+            color={isActive('Home') ? "#3B82F6" : "#94A3B8"} 
+            strokeWidth={isActive('Home') ? 2.5 : 2} 
+          />
         </View>
       </TouchableOpacity>
 
@@ -35,25 +40,37 @@ const Footer = () => {
         style={styles.menuButton}
         onPress={() => navigation.navigate('Subs')}
       >
-        <View style={styles.iconCircle}>
-          <Wallet size={24} color="#94A3B8" strokeWidth={2} />
+        <View style={[styles.iconCircle, isActive('Subs') && styles.activeCircle]}>
+          <Wallet 
+            size={24} 
+            color={isActive('Subs') ? "#3B82F6" : "#94A3B8"} 
+            strokeWidth={isActive('Subs') ? 2.5 : 2} 
+          />
         </View>
       </TouchableOpacity>
 
-      {/* 냉장고 관리 버튼 */}
+      {/* 냉장고 관리 버튼*/}
       <TouchableOpacity 
         style={styles.menuButton}
         onPress={() => navigation.navigate('Fridge')}
       >
-        <View style={styles.iconCircle}>
-          <Refrigerator size={24} color="#94A3B8" strokeWidth={2} />
+        <View style={[styles.iconCircle, isActive('RefDetail') && styles.activeCircle]}>
+          <FridgeIcon 
+            size={24} 
+            color={isActive('RefDetail') ? "#3B82F6" : "#94A3B8"} 
+            strokeWidth={isActive('RefDetail') ? 2.5 : 2} 
+          />
         </View>
       </TouchableOpacity>
 
       {/* 마이페이지 버튼 */}
       <TouchableOpacity style={styles.menuButton}>
-        <View style={styles.iconCircle}>
-          <User size={24} color="#94A3B8" strokeWidth={2} />
+        <View style={[styles.iconCircle, isActive('User') && styles.activeCircle]}>
+          <User 
+            size={24} 
+            color={isActive('User') ? "#3B82F6" : "#94A3B8"} 
+            strokeWidth={isActive('User') ? 2.5 : 2} 
+          />
         </View>
       </TouchableOpacity>
 
@@ -63,7 +80,7 @@ const Footer = () => {
 
 const styles = StyleSheet.create({
   footer: {
-    position: 'absolute', // 화면 하단에 고정
+    position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
@@ -72,7 +89,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
     zIndex: 1000,
-    // 그림자 효과
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -89,18 +105,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingTop: 10, // 아이콘을 살짝 위로 정렬
+    paddingTop: 10,
   },
   iconCircle: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: 'transparent', // 평소엔 투명하게
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
   },
   activeCircle: {
-    backgroundColor: '#EBF2FF', // 활성화된 버튼만 블루 배경
+    backgroundColor: '#EBF2FF', // 활성화된 버튼에만 들어가는 배경색
   },
 });
 

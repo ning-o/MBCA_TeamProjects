@@ -2,7 +2,7 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import FridgeMain from './FridgeMain';
-
+import RefDetail from './RefDetail'
 
 const Stack = createStackNavigator();
 
@@ -11,6 +11,7 @@ const FridgeRouter = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="FridgeMain" component={FridgeMain} />
       {/* 여기에 만든 화면 추가 */}
+      <Stack.Screen name="RefDetail" component={RefDetail} />
     </Stack.Navigator>
   );
 };
