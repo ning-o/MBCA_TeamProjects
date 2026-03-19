@@ -7,6 +7,8 @@ import Footer from '../../common/components/Footer';
 const { width, height } = Dimensions.get('window');
 
 const FridgeMainScreen = () => {
+  const navigation = useNavigation();
+
   // --- [데이터 영역: 나중에 DB 연동] ---
   const spentAmount = 15; // 사용자가 쓴 금액 (단위: 만원)
   const monthlyBudget = 30; // 한 달 총 예산 (단위: 만원)
@@ -69,16 +71,26 @@ const FridgeMainScreen = () => {
         {/* --- 하단 2열 메뉴 카드 섹션 --- */}
         <View style={styles.cardGrid}>
           <View style={styles.row}>
-            <MenuCard title="한달 식비 입력" value={monthlyBudget} unit="만원" sub={`${spentAmount}만원 사용`} />
-            {/* <TouchableOpacity 
-              style={{ flex: 1 }} 
+            {/* 1. 일반 카드 */}
+            <MenuCard 
+              title="한달 식비 입력" 
+              value={monthlyBudget} 
+              unit="만원" 
+              sub={`${spentAmount}만원 사용`} 
+            />
+
+            {/* 2. 클릭 기능이 들어간 영수증 추가 카드 */}
+            <MenuCard 
+              title="장본 재료 추가하기" 
+              icon="📸" 
+              value="영수증 추가" 
               onPress={() => {
-                console.log("영수증 추가 버튼 클릭됨!"); // 작동 확인용 로그
-                navigation.navigate('FridgeDetail'); // 페이지 연결
+                console.log("영수증 추가 버튼 클릭!");
+                navigation.navigate('RefDetail');
               }}
-            ></TouchableOpacity> */}
-            <MenuCard title="장본 재료 추가하기" icon="📸" value="영수증 추가" isAction />
+            />
           </View>
+
           <View style={styles.row}>
             <MenuCard title="냉장고 속 재료" value="계란" sub="유통기한 임박" highlight />
             <MenuCard title="냉장고 털기" icon="🍲" value="계란 볶음밥" sub="다른 요리 추천 >" />
@@ -91,15 +103,20 @@ const FridgeMainScreen = () => {
   );
 };
 
-const MenuCard = ({ title, value, unit, sub, icon, highlight }) => (
-  <TouchableOpacity style={styles.card}>
+const MenuCard = ({ title, value, unit, sub, icon, highlight, onPress }) => (
+  <TouchableOpacity 
+    style={styles.card} 
+    onPress={onPress} 
+    disabled={!onPress} // onPress가 없으면 클릭 효과 비활성화
+    activeOpacity={0.7}
+  >
     <Text style={styles.cardTitle}>{title}</Text>
     <View style={styles.cardContent}>
       {icon && <Text style={styles.cardIcon}>{icon}</Text>}
       <Text style={[styles.cardValue, highlight && { color: '#E11D48' }]}>{value}</Text>
       {unit && <Text style={styles.cardUnit}>{unit}</Text>}
     </View>
-    {sub && <Text style={[styles.cardSub, highlight && { color: '#E11D48' }]}>{sub}</Text>}
+    {sub && <Text style={[styles.cardSub, highlight && { color: '#3B82F6' }]}>{sub}</Text>}
   </TouchableOpacity>
 );
 
