@@ -55,7 +55,7 @@ const FridgeMainScreen = () => {
               <Text style={styles.subText}>1일</Text>
               <Text style={styles.middleLabelText}>15일</Text>
               <Text style={styles.subText}>30일</Text>
-            </View>
+            </View>   
           </View>
 
           <View style={styles.infoBox}>
@@ -84,6 +84,7 @@ const FridgeMainScreen = () => {
               icon="📸" 
               value="영수증 추가" 
               onPress={() => console.log("영수증 추가 클릭")}
+
             />
           </View>
           
@@ -100,7 +101,7 @@ const FridgeMainScreen = () => {
               icon="🍲" 
               value="계란 볶음밥" 
               sub="다른 요리 추천 >" 
-              onPress={() => console.log("레시피 추천 클릭")}
+              onPress={() => navigation.navigate('Recipe')}
             />
           </View>
         </View>
