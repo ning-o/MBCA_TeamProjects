@@ -86,13 +86,16 @@ const FridgeMainScreen = () => {
               value="영수증 추가" 
               onPress={() => {
                 console.log("영수증 추가 버튼 클릭!");
-                navigation.navigate('RefDetail');
+
               }}
             />
           </View>
 
           <View style={styles.row}>
-            <MenuCard title="냉장고 속 재료" value="계란" sub="유통기한 임박" highlight />
+            <MenuCard title="냉장고 속 재료" value="계란" sub="유통기한 임박" highlight 
+            onPress={() => {
+                navigation.navigate('RefDetail');
+              }}/>
             <MenuCard title="냉장고 털기" icon="🍲" value="계란 볶음밥" sub="다른 요리 추천 >" />
           </View>
         </View>

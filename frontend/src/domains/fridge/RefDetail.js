@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, FlatList, StyleSheet, Text, TouchableOpacity, TextInput } from 'react-native';
 import { Search, ChevronLeft, CalendarDays, Box, Home, Wallet, Refrigerator as FridgeIcon, User } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+import Footer from '../../common/components/Footer';
 
 const Header = ({ title }) => (
   <View style={styles.header}>
@@ -10,31 +11,6 @@ const Header = ({ title }) => (
     </TouchableOpacity>
     <Text style={styles.title}>{title}</Text>
     <View style={{ width: 24 }} />
-  </View>
-);
-
-const Footer = () => (
-  <View style={styles.footer}>
-    <TouchableOpacity style={styles.menuButton}>
-      <View style={styles.iconCircle}>
-        <Home size={24} color="#94A3B8" />
-      </View>
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.menuButton}>
-      <View style={styles.iconCircle}>
-        <Wallet size={24} color="#94A3B8" />
-      </View>
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.menuButton}>
-      <View style={[styles.iconCircle, styles.activeCircle]}>
-        <FridgeIcon size={24} color="#3B82F6" strokeWidth={2.5} />
-      </View>
-    </TouchableOpacity>
-    <TouchableOpacity style={styles.menuButton}>
-      <View style={styles.iconCircle}>
-        <User size={24} color="#94A3B8" />
-      </View>
-    </TouchableOpacity>
   </View>
 );
 
