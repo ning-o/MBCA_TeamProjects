@@ -2,7 +2,11 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
 import FridgeMain from './FridgeMain';
-
+import RefDetail from './RefDetail';
+import RecipeScreen from './Recipe';
+import OCRConfirmScreen from './OCRConfirmScreen';
+import RecipeList from './RecipeList';
+import CustomCameraScreen from './FridgeComponents/CustomCameraScreen';
 
 const Stack = createStackNavigator();
 
@@ -11,8 +15,13 @@ const FridgeRouter = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="FridgeMain" component={FridgeMain} />
       {/* 여기에 만든 화면 추가 */}
+      <Stack.Screen name="RefDetail" component={RefDetail} />
+      <Stack.Screen name="Recipe" component={RecipeScreen} />
+      <Stack.Screen name="RecipeList" component={RecipeList} />
+      <Stack.Screen name="OCRConfirm" component={OCRConfirmScreen} />
+      <Stack.Screen name="CustomCamera" component={CustomCameraScreen} />
     </Stack.Navigator>
   );
 };
 
-export default FridgeRouter;
+export default FridgeRouter; 
