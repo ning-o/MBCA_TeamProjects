@@ -1,6 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import Header from '../../common/components/Header';
+import Footer from '../../common/components/Footer';
 
 const { height } = Dimensions.get('window');
 
@@ -24,12 +27,17 @@ const RecipeScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* 1. 고정된 상단 영역 (뒤로가기 + 추천 카드) */}
-      <View style={styles.fixedHeader}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backText}>{"<"}</Text>
-        </TouchableOpacity>
+      {/* ✅ 1. 공통 헤더 적용 */}
+      <Header />
 
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* 헤더 공간 확보 (헤더가 절대 위치일 경우 대비) */}
+        <View style={{ height: 60 }} />
+
+        {/* 추천 카드 영역 (상단 고정에서 스크롤 내부로 이동하거나 유지 선택 가능) */}
         <View style={styles.recommendCard}>
           <View style={styles.cardHeader}>
             <View style={styles.rankBadge}><Text style={styles.rankText}>1위</Text></View>
@@ -43,63 +51,64 @@ const RecipeScreen = () => {
             <Text style={styles.infoText}>⏱ {recipeData.time}  |  난이도 : {recipeData.difficulty}</Text>
           </View>
         </View>
-      </View>
 
-      {/* 2. 스크롤 가능한 하단 상세 영역 */}
-      <ScrollView 
-        style={styles.bottomSheet} 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-
-        {/* AI Pick 이유 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>AI's Pick Reason</Text>
-          <View style={styles.aiBubble}>
-            <Text style={styles.aiText}>{recipeData.aiReason}</Text>
-          </View>
-        </View>
-
-        {/* 레시피 상세 설명 추가 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Recipe Step</Text>
-          <View style={styles.recipeDetailBox}>
-            <Text style={styles.recipeDetailText}>{recipeData.details}</Text>
-          </View>
-        </View>
-
-        {/* 재료 리스트 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Ingredients</Text>
-          {recipeData.ingredients.map((item) => (
-            <View key={item.id} style={styles.ingredientRow}>
-              <View style={[styles.checkBox, item.checked && styles.checkedBox]}>
-                {item.checked && <Text style={styles.checkMark}>✓</Text>}
-              </View>
-              <Text style={styles.ingredientName}>{item.name}</Text>
+        {/* 상세 내용 영역 */}
+        <View style={styles.bottomSheet}>
+          {/* AI Pick 이유 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>AI's Pick Reason</Text>
+            <View style={styles.aiBubble}>
+              <Text style={styles.aiText}>{recipeData.aiReason}</Text>
             </View>
-          ))}
+          </View>
+
+          {/* 레시피 상세 설명 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Recipe Step</Text>
+            <View style={styles.recipeDetailBox}>
+              <Text style={styles.recipeDetailText}>{recipeData.details}</Text>
+            </View>
+          </View>
+
+          {/* 재료 리스트 */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Ingredients</Text>
+            {recipeData.ingredients.map((item) => (
+              <View key={item.id} style={styles.ingredientRow}>
+                <View style={[styles.checkBox, item.checked && styles.checkedBox]}>
+                  {item.checked && <Text style={styles.checkMark}>✓</Text>}
+                </View>
+                <Text style={styles.ingredientName}>{item.name}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* 요리 완료 버튼 */}
+          <TouchableOpacity 
+            style={styles.completeButton}
+            onPress={() => alert("요리가 완료되었습니다! 냉장고 재료가 업데이트됩니다.")}
+          >
+            <Text style={styles.completeButtonText}>요리 완료!</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* 요리 완료 버튼 */}
-      <TouchableOpacity style={styles.completeButton}>
-        <Text style={styles.completeButtonText}>요리 완료!</Text>
-      </TouchableOpacity>
+      {/* ✅ 2. 공통 푸터 적용 */}
+      <Footer />
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F1F5F9' },
-  fixedHeader: { paddingHorizontal: 25, paddingTop: 10 },
-  backButton: { paddingVertical: 15 },
-  backText: { fontSize: 24, color: '#1E293B', fontWeight: 'bold' },
+  scrollContent: { paddingBottom: 100 }, // 푸터 높이만큼 여백
   
   recommendCard: {
     backgroundColor: '#1E293B',
     borderRadius: 30,
     padding: 25,
+    marginHorizontal: 20,
+    marginTop: 10,
     marginBottom: 20,
     elevation: 5,
   },
@@ -113,24 +122,15 @@ const styles = StyleSheet.create({
   tagText: { color: '#818CF8', fontWeight: 'bold', fontSize: 14 },
   infoText: { color: '#CBD5E1', fontSize: 13, fontWeight: '600' },
 
-  // 하단 영역 스타일
   bottomSheet: {
-    flex: 1,
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 40,
     borderTopRightRadius: 40,
-    marginTop: 10,
+    paddingHorizontal: 30,
+    paddingTop: 10,
+    paddingBottom: 40,
+    minHeight: height * 0.5,
   },
-  dragHandle: {
-    width: 40,
-    height: 5,
-    backgroundColor: '#E2E8F0',
-    borderRadius: 3,
-    alignSelf: 'center',
-    marginTop: 15,
-    marginBottom: 10,
-  },
-  scrollContent: { paddingHorizontal: 30, paddingBottom: 120 },
   section: { marginTop: 25 },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B', marginBottom: 15 },
   
@@ -146,7 +146,14 @@ const styles = StyleSheet.create({
   checkMark: { color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' },
   ingredientName: { fontSize: 16, color: '#334155' },
 
-  completeButton: { position: 'absolute', bottom: 30, left: 25, right: 25, backgroundColor: '#1E293B', paddingVertical: 18, borderRadius: 30, alignItems: 'center', elevation: 5 },
+  completeButton: { 
+    marginTop: 40,
+    backgroundColor: '#1E293B', 
+    paddingVertical: 18, 
+    borderRadius: 30, 
+    alignItems: 'center', 
+    elevation: 5 
+  },
   completeButtonText: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
 });
 
