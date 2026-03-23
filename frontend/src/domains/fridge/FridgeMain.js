@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Soup, Camera } from 'lucide-react-native';
+import { Soup, Camera, ChevronRight } from 'lucide-react-native'; // 아이콘 추가
 import { useNavigation } from '@react-navigation/native';
 
 import Header from '../../common/components/Header';
@@ -115,9 +115,9 @@ const FridgeMainScreen = () => {
             </View>
 
             <View style={styles.labelRow}>
-              <Text style={styles.subText}>시작</Text>
+              <Text style={styles.subText}>1일</Text>
               <Text style={styles.middleLabelText}>15일</Text>
-              <Text style={styles.subText}>마감</Text>
+              <Text style={styles.subText}>말일</Text>
             </View>   
           </View>
 
@@ -156,7 +156,7 @@ const FridgeMainScreen = () => {
               title="장본 재료 추가하기" 
               renderIcon={() => <Camera size={20} color="#1E293B" />} 
               value="영수증 촬영" 
-              sub="직접 추가하기 >"  // 화살표(>)를 넣어서 누를 수 있다는 느낌을 줍니다
+              sub="직접 추가하기"  
               alignRight={true} 
               onPress={handleCameraLaunch} 
               onSubPress={handleManualAdd} // 서브 버튼 클릭 시 직접 추가 함수 실행
@@ -180,11 +180,11 @@ const FridgeMainScreen = () => {
               title="냉장고 털기" 
               renderIcon={() => <Soup size={20} color="#1E293B" />} 
               value={topRecommendedRecipe} 
-              sub="다른 요리 추천 >" 
+              sub="다른 요리 추천" 
               alignRight={true}
               // 카드 메인(우유 리조또 영역) 클릭 시 이동
               onPress={() => navigation.navigate('Recipe', { recipeName: topRecommendedRecipe })} 
-              // 하단 '다른 요리 추천 >' 클릭 시 이동
+              // 하단 '다른 요리 추천' 클릭 시 이동
               onSubPress={() => navigation.navigate('RecipeList')} 
             />
           </View>
@@ -255,14 +255,18 @@ const MenuCard = ({ title, value, unit, sub, icon, highlight, onPress, isInput, 
       )}
     </View>
 
-    {/* 하단: 서브 텍스트 */}
+    {/* 하단: 서브 버튼 텍스트 */}
     {sub ? (
-      /* onSubPress가 있으면 텍스트만 은밀하게 버튼화 시킴 */
       onSubPress ? (
-        <TouchableOpacity onPress={onSubPress} activeOpacity={0.5}>
-          <Text style={[styles.cardSub, highlight && { color: '#3B82F6' }, alignRight && { textAlign: 'right' }]}>
+        <TouchableOpacity 
+          onPress={onSubPress} 
+          activeOpacity={0.6}
+          style={styles.subBtnContainer} // 서브 버튼 클릭 영역 컨테이너
+        >
+          <Text style={[styles.subBtnText, highlight && { color: '#3B82F6' }]}>
             {sub}
           </Text>
+          <ChevronRight size={10} color={highlight ? "#3B82F6" : "#94A3B8"} style={{marginLeft: 2}} />
         </TouchableOpacity>
       ) : (
         <Text style={[styles.cardSub, highlight && { color: '#3B82F6' }, alignRight && { textAlign: 'right' }]}>
@@ -286,7 +290,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF', borderBottomLeftRadius: 50, borderBottomRightRadius: 50,
     paddingTop: 20, paddingBottom: 40, alignItems: 'center', elevation: 5,
   },
-  brandTitle: { fontSize: 20, fontWeight: 'bold', color: '#2D3277', marginBottom: 25 },
+  brandTitle: { fontSize: 16, fontWeight: 'bold', color: '#2D3277', marginTop: 10, marginBottom: 20 },
   gaugeWrapper: { width: 280, alignItems: 'center' },
   gaugeBox: { width: 260, height: 130, position: 'relative' },
   gaugeContainer: { 
@@ -333,7 +337,7 @@ const styles = StyleSheet.create({
   cardGrid: { paddingHorizontal: 20, marginTop: 35 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
   card: {
-    backgroundColor: '#FFFFFF', width: (width - 55) / 2, borderRadius: 25, padding: 18, height: 130,
+    backgroundColor: '#FFFFFF', width: (width - 55) / 2, borderRadius: 25, padding: 18, height: 135, // 보조 버튼 공간 확보 위해 미세 조정
     justifyContent: 'space-between', elevation: 3,
   },
   cardTitle: { fontSize: 12, fontWeight: '600', color: '#64748B' },
@@ -341,20 +345,26 @@ const styles = StyleSheet.create({
   
   /* 카드 내부 아이콘 및 값 스타일 */
   cardIcon: { fontSize: 18, marginRight: 5 },
-  cardPrefixBlue: { fontSize: 15, color: '#3B82F6', fontWeight: '500' }, // D-day 전용 얇고 파란 스타일
+  cardPrefixBlue: { fontSize: 15, color: '#3B82F6', fontWeight: '500' }, 
   cardValue: { fontSize: 17, fontWeight: 'bold', color: '#1E293B', maxWidth: '80%' },
   cardUnit: { fontSize: 13, color: '#1E293B', marginLeft: 2, marginTop: 3 },
   cardSub: { fontSize: 11, color: '#94A3B8', fontWeight: '500' },
 
   /* 1번 카드(식비 입력) 전용 TextInput 스타일 */
-  cardInput: {
-    borderBottomWidth: 1,
-    borderBottomColor: '#3B82F6', 
-    minWidth: 40,
-    padding: 0,
-    margin: 0,
-    textAlign: 'center', 
+  cardInput: { borderBottomWidth: 1, borderBottomColor: '#3B82F6', minWidth: 40, textAlign: 'center' },
+
+  /* 보조 버튼 영역 스타일 (요청 사항 반영) */
+  subBtnContainer: {
+    backgroundColor: '#F0F7FF', // 배경색을 넣어 버튼임을 명시
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 2,
   },
+  subBtnText: { fontSize: 10, color: '#033169', fontWeight: '800' },
   /* ============================================================
      [END] 하단 버튼 카드 영역 스타일
      ============================================================ */
