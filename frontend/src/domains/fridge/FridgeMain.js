@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput, Alert } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Soup, Camera, ChevronRight } from 'lucide-react-native'; // 아이콘 추가
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput, Alert, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Soup, Camera, ChevronRight, Settings, Users, LogOut, UtensilsCrossed } from 'lucide-react-native'; // UtensilsCrossed 아이콘 추가
 import { useNavigation } from '@react-navigation/native';
 
 import Header from '../../common/components/Header';
@@ -12,6 +12,7 @@ const { width, height } = Dimensions.get('window');
 
 const FridgeMainScreen = () => {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets(); // 헤더 위 버튼 위치 계산용
 
   // --- [데이터 및 실시간 날짜 로직] ---
   const spentAmount = 17;     
@@ -22,6 +23,14 @@ const FridgeMainScreen = () => {
   const [lastValidBudget, setLastValidBudget] = useState('30'); // 취소 시 기존 값 복구용 백업
   const parsedBudget = parseInt(monthlyBudget) || 1; // 0이나 빈칸일 때 에러 방지
 
+  // 냉장고 관리 모달 및 상태 관리
+  const [isManageModalVisible, setIsManageModalVisible] = useState(false);
+  const [inputFridgeName, setInputFridgeName] = useState("팀장님네"); // 사용자 입력용 (앞에 이름만)
+  const [confirmedFridgeName, setConfirmedFridgeName] = useState("팀장님네"); // 최종 확정된 이름
+
+  // LLM 추천 메뉴 임시 데이터 (추후 API 연동)
+  const recommendedMenu = "제철 달래 된장찌개";
+
   // 입력창 포커스가 해제될 때(끌 때) 실행되는 함수
   const handleBudgetBlur = () => {
     if (monthlyBudget.trim() === '' || parseInt(monthlyBudget) <= 0) {
@@ -31,6 +40,13 @@ const FridgeMainScreen = () => {
       // 정상 입력하고 끄면 백업 데이터도 업데이트
       setLastValidBudget(monthlyBudget);
     }
+  };
+
+  // 설정 저장 함수
+  const handleSaveSettings = () => {
+    setConfirmedFridgeName(inputFridgeName);
+    setIsManageModalVisible(false);
+    Keyboard.dismiss();
   };
 
   const today = new Date();
@@ -76,6 +92,14 @@ const FridgeMainScreen = () => {
   return (
     <SafeAreaView style={styles.container}>
       <Header />
+
+      {/* 📍 [수정 영역] 냉장고 관리 버튼 (Header.js 의 zIndex 1000 보다 높게 설정) */}
+      <TouchableOpacity 
+        style={[styles.manageButton, { top: insets.top + 8 }]} 
+        onPress={() => setIsManageModalVisible(true)}
+      >
+        <Settings size={24} color="#333" />
+      </TouchableOpacity>
       
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={{ height: height * 0.08 }} />
@@ -84,7 +108,8 @@ const FridgeMainScreen = () => {
             [START] 게이지바 영역
             ============================================================ */}
         <View style={styles.topSection}>
-          <Text style={styles.brandTitle}>Fridge Manager</Text>
+          {/* 📍 [수정 영역] 설정된 이름을 반영하여 출력 */}
+          <Text style={styles.brandTitle}>{confirmedFridgeName} 냉장고</Text>
           
           <View style={styles.gaugeWrapper}>
             <View style={styles.gaugeBox}>
@@ -139,16 +164,15 @@ const FridgeMainScreen = () => {
           
           {/* 윗줄 (1번, 2번 카드) */}
           <View style={styles.row}>
-            {/* 1. 한달 식비 입력 카드 (우측 정렬 및 자동 선택 UX 추가) */}
+            {/* 1. 한달 식비 입력 카드 -> 제철음식 추천 LLM 카드로 변경 */}
             <MenuCard 
-              title="한달 식비 입력" 
-              value={monthlyBudget} 
-              unit="만원" 
-              sub={`현재 ${spentAmount}만원 사용`} 
-              isInput={true}
-              alignRight={true} // 우측 정렬 속성 
-              onChangeText={setMonthlyBudget}
-              onBlur={handleBudgetBlur} // 입력 취소 시 복구 함수 연결
+              title="장 보러 가기전에 추천" 
+              value={recommendedMenu} 
+              renderIcon={() => <UtensilsCrossed size={20} color="#1E293B" />} 
+              sub="제철 음식이 땡기지 않나요?" 
+              alignRight={true} 
+              isSubCenter={true} // 서브 텍스트 중앙 정렬
+              onPress={() => Alert.alert("LLM 연동 준비중", "현재 예산 페이스와 제철 식재료를 분석하여 장보기 최적화 메뉴 추천 기능을 준비중입니다.")} 
             />
 
             {/* 2. 장본 재료 추가하기 (클릭 시 카메라 실행) */}
@@ -175,7 +199,7 @@ const FridgeMainScreen = () => {
               onPress={() => navigation.navigate('RefDetail')} 
             />
 
-            {/* 4. 냉장고 털기 (보유 재료 기반 1순위 추천 요리 노출) */}
+            {/* 4. 냉장고 털기 (현재 재료 기반 추천 요리 1순위) */}
             <MenuCard 
               title="냉장고 털기" 
               renderIcon={() => <Soup size={20} color="#1E293B" />} 
@@ -195,13 +219,103 @@ const FridgeMainScreen = () => {
             ============================================================ */}
             
       </ScrollView>
+
+      {/* 냉장고 관리 모달 */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isManageModalVisible}
+        onRequestClose={() => setIsManageModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>냉장고 관리</Text>
+              
+              <View style={styles.modalMenuContainer}>
+                {/* 1. 냉장고 이름 입력 받기 */}
+                <View style={styles.modalMenuItem}>
+                  <Text style={styles.menuLabel}>냉장고 이름</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <TextInput
+                      style={styles.modalInput}
+                      value={inputFridgeName}
+                      onChangeText={setInputFridgeName}
+                      placeholder="이름 입력"
+                      selectTextOnFocus={true} 
+                    />
+                    <Text style={styles.menuValue}> 냉장고 〉</Text>
+                  </View>
+                </View>
+
+                {/* 2. 냉장고 한달 식비 설정 */}
+                <View style={styles.modalMenuItem}>
+                  <Text style={styles.menuLabel}>한달 식비 설정</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <TextInput
+                      style={styles.modalInput}
+                      value={monthlyBudget}
+                      onChangeText={setMonthlyBudget}
+                      onBlur={handleBudgetBlur}
+                      keyboardType="numeric"
+                      maxLength={4}
+                      selectTextOnFocus={true} 
+                    />
+                    <Text style={styles.menuValue}> 만원 〉</Text>
+                  </View>
+                </View>
+
+                {/* 3. 동거인 초대 */}
+                <TouchableOpacity style={styles.modalMenuItem}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Users size={18} color="#1E293B" style={{marginRight: 8}}/>
+                    <Text style={styles.menuLabel}>동거인 초대</Text>
+                  </View>
+                  <ChevronRight size={18} color="#94A3B8" />
+                </TouchableOpacity>
+
+                {/* 4. 냉장고 탈퇴/삭제 */}
+                <TouchableOpacity style={[styles.modalMenuItem, {borderBottomWidth: 0}]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <LogOut size={18} color="#EF4444" style={{marginRight: 8}}/>
+                    <Text style={[styles.menuLabel, {color: '#EF4444'}]}>냉장고 탈퇴/삭제</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              {/* 하단 버튼 영역 */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+                <TouchableOpacity 
+                  style={[styles.modalBtn, { backgroundColor: '#F1F5F9' }]} 
+                  onPress={() => {
+                    setIsManageModalVisible(false);
+                    setInputFridgeName(confirmedFridgeName); 
+                    setMonthlyBudget(lastValidBudget); 
+                  }}
+                >
+                  <Text style={{ color: '#64748B', fontWeight: 'bold' }}>닫기</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[styles.modalBtn, { backgroundColor: '#3B82F6' }]} 
+                  onPress={handleSaveSettings}
+                >
+                  <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>저장</Text>
+                </TouchableOpacity>
+              </View>
+
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
       <Footer />
     </SafeAreaView>
   );
 };
 
 // --- [공통 메뉴 카드 컴포넌트] ---
-const MenuCard = ({ title, value, unit, sub, icon, highlight, onPress, isInput, onChangeText, onBlur, alignRight, prefixText, onSubPress, renderIcon }) => (
+const MenuCard = ({ title, value, unit, sub, icon, highlight, onPress, isInput, onChangeText, onBlur, alignRight, prefixText, onSubPress, renderIcon, isSubCenter }) => ( // ★ isSubCenter Props 추가
   <TouchableOpacity 
     style={styles.card} 
     onPress={onPress || (() => {})} 
@@ -269,7 +383,12 @@ const MenuCard = ({ title, value, unit, sub, icon, highlight, onPress, isInput, 
           <ChevronRight size={10} color={highlight ? "#3B82F6" : "#94A3B8"} style={{marginLeft: 2}} />
         </TouchableOpacity>
       ) : (
-        <Text style={[styles.cardSub, highlight && { color: '#3B82F6' }, alignRight && { textAlign: 'right' }]}>
+        <Text style={[
+          styles.cardSub, 
+          highlight && { color: '#3B82F6' }, 
+          alignRight && !isSubCenter && { textAlign: 'right' }, // isSubCenter가 아닐 때만 우측 정렬
+          isSubCenter && { textAlign: 'center', width: '100%' }  // 1번 카드 서브 텍스트만 중앙 정렬
+        ]}>
           {sub}
         </Text>
       )
@@ -284,7 +403,7 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 100 },
   
   /* ============================================================
-     [START] 게이지바 영역 스타일 (현재 상태 유지 / 수정 금지 구역)
+     [START] 게이지바 영역 스타일
      ============================================================ */
   topSection: {
     backgroundColor: '#FFFFFF', borderBottomLeftRadius: 50, borderBottomRightRadius: 50,
@@ -353,9 +472,9 @@ const styles = StyleSheet.create({
   /* 1번 카드(식비 입력) 전용 TextInput 스타일 */
   cardInput: { borderBottomWidth: 1, borderBottomColor: '#3B82F6', minWidth: 40, textAlign: 'center' },
 
-  /* 보조 버튼 영역 스타일 (요청 사항 반영) */
+  /* 보조 버튼 영역 스타일 */
   subBtnContainer: {
-    backgroundColor: '#F0F7FF', // 배경색을 넣어 버튼임을 명시
+    backgroundColor: '#F0F7FF',
     paddingVertical: 4,
     paddingHorizontal: 8,
     borderRadius: 8,
@@ -367,6 +486,63 @@ const styles = StyleSheet.create({
   subBtnText: { fontSize: 10, color: '#033169', fontWeight: '800' },
   /* ============================================================
      [END] 하단 버튼 카드 영역 스타일
+     ============================================================ */
+
+  /* ============================================================
+     [START] 새로 추가된 관리 버튼 및 모달 스타일
+     ============================================================ */
+  manageButton: {
+    position: 'absolute',
+    right: 16,
+    zIndex: 1001, // Header.js 의 zIndex 1000 보다 높게 설정
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '85%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 25,
+    padding: 25,
+    alignItems: 'center',
+    elevation: 5,
+  },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 20, color: '#1E293B' },
+  modalMenuContainer: { width: '100%', marginBottom: 20 },
+  modalMenuItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  menuLabel: { fontSize: 15, color: '#1E293B', fontWeight: '600' },
+  menuValue: { fontSize: 14, color: '#64748B' },
+  modalInput: { 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#3B82F6', 
+    fontSize: 14, 
+    padding: 0, 
+    minWidth: 40, 
+    textAlign: 'right',
+    color: '#1E293B'
+  },
+  modalBtn: {
+    width: '48%',
+    paddingVertical: 12,
+    borderRadius: 20,
+    alignItems: 'center',
+  },
+  /* ============================================================
+     [END] 새로 추가된 관리 버튼 및 모달 스타일
      ============================================================ */
 });
 
