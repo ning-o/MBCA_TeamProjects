@@ -1,0 +1,165 @@
+import React, { useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { 
+  StyleSheet, 
+  TouchableOpacity,
+  Text, 
+  View,   
+  Image,
+  Dimensions 
+} from 'react-native';
+
+import LOGO_IMAGES from './../SubsImageURL';
+import SubsChange from './SubsChange';
+
+const SubsMainList = ()=>{
+    const tempData = ['netflix','disney']
+    const subscribetempData = [{'name':'netflix','logo':'netflix','price':'10000','category':'OTT'}]    
+
+    const [isChanging, setIsChanging] = useState(false);
+    const [selectedItem, setSelectedItem] = useState(null); // 데이터 전달용 변수
+
+    // 변경하기 버튼 클릭시
+    const handleEditPress = (item) => {
+      setSelectedItem(item); // 클릭한 행의 데이터 저장
+      setIsChanging(true);   // 화면 전환
+    };
+
+    return (
+    <SafeAreaView style={styles.safeArea}>
+        <View style={styles.header}>
+            <Text style={{borderBottomWidth:1}}>내 구독 리스트</Text>
+            <View style={styles.headerbox}>
+                {tempData.map((item, index) => (
+                    <View key={index} style={styles.headerboxlist}>
+                        <View key={index} style={styles.headerboxlist}>
+                          <Image source={LOGO_IMAGES[item]} style={styles.imageLogo}></Image>
+                        </View>
+                    </View>
+                ))}
+            </View>
+        </View>
+        {!isChanging ? (
+        <>
+          <View style={styles.container}>
+              <View style={styles.containertop}>
+                  <Text>구독 서비스 변경 추천</Text>
+                  <TouchableOpacity style={styles.containerSearchButton} onPress={() => console.log('a')}>
+                      <Text style={styles.buttonText}>찾아보기</Text>
+                  </TouchableOpacity>
+              </View>            
+          </View>
+
+          <View style={styles.bottom}>
+              <Text style={{borderBottomWidth:1, padding:5}}>구독 서비스 요금제 목록</Text>
+              {subscribetempData.map((item, index) => (
+                      <View key={index} style={styles.bottomboxlist}>                        
+                          <Text style={[styles.bottombox, {flex:1,}]}>{item.category}</Text>
+                          <View style={[styles.bottombox, {flex:4, flexDirection: 'row',}]}>
+                            <Image source={LOGO_IMAGES[item.logo]} style={styles.imageLogo}></Image>
+                            <Text style={{marginLeft:15}}>{item.name}</Text>
+                          </View>
+                          <Text style={[styles.bottombox, {flex:2}]}>{item.price}</Text>
+                          <TouchableOpacity style={[styles.bottombutton, {marginLeft:10}]} onPress={() => handleEditPress(item)}>
+                              <Text>변경{'\n'}하기</Text>
+                          </TouchableOpacity>
+                      </View>
+              ))}
+          </View>
+        </>
+        ) : (
+          // === 변경하기 클릭 시 새 공간 ===
+        <View style={styles.ChangeContainer}>
+          <SubsChange 
+            data={selectedItem} 
+            onBack={() => setIsChanging(false)} 
+          />
+        </View>
+      )}
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#f8f9fa', // 아이폰 스타일의 연한 회색 배경    
+    position: 'relative',
+    padding: 5,    
+    
+  },
+
+  header:{
+    minHeight: 130,
+    borderBottomWidth: 1,
+  },
+
+  headerbox:{
+    padding: 2,    
+    flexDirection: 'row',
+  },
+
+  headerboxlist:{
+    paddingHorizontal:5,
+  },
+
+  container: {    
+    minHeight:100,
+    borderBottomWidth:1,
+  },
+
+  containertop:{
+    flexDirection: 'row',
+    padding:5,
+    
+  },
+
+  containerSearchButton:{
+    marginLeft: 'auto',
+    paddingHorizontal: 5,
+    backgroundColor: '#DDD',
+  },
+
+  bottom:{
+    flex:1,    
+  },
+
+  bottomboxlist:{        
+    flexDirection: 'row',     
+    borderBottomWidth:1,    
+    maxHeight:60,        
+  },
+  
+  bottombox:{    
+    alignItems: 'center',    
+    paddingHorizontal:10,
+    paddingVertical: 10, 
+    borderRightWidth:1,    
+  },
+
+  bottombutton:{
+    width:35, 
+    height:45, 
+    backgroundColor:'lightgray',
+    marginRight:10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    
+  },
+
+  imageLogo:{
+    width: 30, 
+    height: 30,
+    borderRadius: 100 / 2,
+    borderWidth:1,
+  },
+
+  // 변경하기 클릭후 화면
+  ChangeContainer: {
+    flex: 1,     
+    backgroundColor: '#fff',
+  },
+
+})
+
+export default SubsMainList

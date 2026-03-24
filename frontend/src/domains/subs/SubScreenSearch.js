@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
   StyleSheet, 
   Text, 
-  View,
+  View,   
   ScrollView,
   Dimensions 
 } from 'react-native';
@@ -12,24 +12,31 @@ import {
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
 
-import SubsMainList from './SubsComponents/SubsMainList';
+import SubsSearchList from './SubsComponents/SubsSearchList';
 import Subsfooter from './SubsComponents/SubsFooter';
 
 const { width, height } = Dimensions.get('window');
 
-export default function SubsMain() {
-  return (
-    <View style={styles.container}>      
+export default function SubScreenSearch() {
+  
+
+  return (    
+    <View style={styles.container}>
+      {/* [고정] 공용 헤더 사용 */}
       <Header/>
-      <View style={styles.mainbox}>        
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>              
-          <SubsMainList />          
+      <View style={styles.mainbox}>
+        
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>    
+          <SubsSearchList />        
         </ScrollView>
 
-        <Subsfooter />        
+        <Subsfooter />
+        
       </View>
+      {/* [고정] 공용 푸터 사용 */}
       <Footer />
-    </View>
+    </View>    
+    
   );
 }
 
@@ -38,15 +45,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#afd5fa', // 아이폰 스타일의 연한 회색 배경    
     justifyContent: 'center', // 자식(mainbox)을 세로 중앙으로
-    alignItems: 'center',     // 자식(mainbox)을 가로 중앙으로    
+    alignItems: 'center',     // 자식(mainbox)을 가로 중앙으로
+
   },
 
   mainbox: {
-    width:width,
-    height:height - 15,
+    width: '100%',
+    height:height - 15,    
     backgroundColor: '#f8f9fa', // 아이폰 스타일의 연한 회색 배경    
     borderWidth: 1,
-    overflow: 'hidden',
 
   },
 
@@ -55,5 +62,5 @@ const styles = StyleSheet.create({
     paddingBottom:100,
     minHeight: '100%',
   },
-
+  
 });
