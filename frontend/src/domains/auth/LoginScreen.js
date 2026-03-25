@@ -5,7 +5,6 @@ import {
   TextInput, 
   TouchableOpacity, 
   StyleSheet, 
-  SafeAreaView, 
   KeyboardAvoidingView, 
   Platform,
   Alert 
@@ -109,14 +108,14 @@ export function LoginScreen() {
             >
               <Text style={[styles.socialText, { color: 'white' }]}>네이버로 로그인</Text>
             </TouchableOpacity>
-          </View>
+          </View> */}
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>아직 회원이 아니신가요? </Text>
             <TouchableOpacity onPress={goToSignup}>
               <Text style={styles.signupText}>회원가입</Text>
             </TouchableOpacity>
-          </View> */}
+          </View>
         </View>
       </KeyboardAvoidingView>
     </View>

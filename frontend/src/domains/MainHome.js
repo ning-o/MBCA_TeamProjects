@@ -1,7 +1,7 @@
 // src/screens/MainHome.js
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-// import Header from '../common/components/Header'; // 사용 안 할 거면 지우셔도 됩니다
+import Header from '../common/components/Header'; // 사용 안 할 거면 지우셔도 됩니다
 import Footer from '../common/components/Footer'; // 사용 안 할 거면 지우셔도 됩니다
 import { CreditCard, Refrigerator, TrendingUp } from 'lucide-react-native';
 import {FeatureCard} from '../common/components/FeatureCard';
@@ -13,6 +13,7 @@ function MainHome({ navigation }) {
   const handleStatistics = () => navigation.navigate('Auth');
 
   return (
+<<<<<<< HEAD
     <View style={{ flex: 1, paddingTop:100 }}>
       <View style={styles.cardList}>
         <FeatureCard
@@ -36,6 +37,13 @@ function MainHome({ navigation }) {
           iconColor="#A855F7" // purple-500
           onPress={handleStatistics}
         />
+=======
+    <View style={{ flex: 1 }}>
+      <Header/>
+      <View style={styles.container}>
+        <Text style={styles.text}>여기가 앱 공통 메인 홈입니다.</Text>
+        <Text>메인 홈 화면은 여기서 작업하세요</Text>
+>>>>>>> e8c61a501ef8236a43919e87501264a062ffae31
       </View>
       <Footer/>
     </View>

@@ -1,11 +1,23 @@
-import { useState } from 'react';
-import { Button } from '../../common/components/button';
-import { Input } from '../../common/components/input';
-import { Label } from '../../common/components/label';
-import { Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react';
+
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet, 
+  ScrollView, 
+  SafeAreaView, 
+  KeyboardAvoidingView, 
+  Platform,
+  Alert 
+} from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react-native';
 
 export function SignUpScreen() {
-  const handleSubscription = () => navigation.navigate('SubsRouter');
+  const navigation = useNavigation();
+  
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -15,202 +27,201 @@ export function SignUpScreen() {
   const [isCheckingId, setIsCheckingId] = useState(false);
   const [idCheckResult, setIdCheckResult] = useState(null);
 
+  // 아이디 중복 확인 시뮬레이션
   const handleCheckId = async () => {
-    if (!userId) return;
-    
+    if (!userId) {
+      Alert.alert('알림', '아이디를 입력해주세요.');
+      return;
+    }
     setIsCheckingId(true);
-    // 실제로는 서버에 확인 요청
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // 실제 서버 API 호출 영역
+    await new Promise(resolve => setTimeout(resolve, 600));
     setIdCheckResult(Math.random() > 0.5 ? 'available' : 'taken');
     setIsCheckingId(false);
   };
 
-  const handleKakaoSignup = () => {
-    // 카카오 로그인 처리
-    console.log('카카오 회원가입');
-  };
-
-  const handleNaverSignup = () => {
-    // 네이버 로그인 처리
-    console.log('네이버 회원가입');
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = () => {
+    if (!userId || !password || !email) {
+      Alert.alert('알림', '모든 정보를 입력해주세요.');
+      return;
+    }
     if (password !== confirmPassword) {
-      alert('비밀번호가 일치하지 않습니다.');
+      Alert.alert('오류', '비밀번호가 일치하지 않습니다.');
       return;
     }
     if (idCheckResult !== 'available') {
-      alert('아이디 중복 확인을 해주세요.');
+      Alert.alert('알림', '아이디 중복 확인을 해주세요.');
       return;
     }
-    console.log('회원가입:', { userId, password, email });
+    
+    console.log('회원가입 요청:', { userId, password, email });
+    Alert.alert('성공', '회원가입이 완료되었습니다!', [
+      { text: '확인', onPress: () => navigation.navigate('Login') }
+    ]);
   };
 
   return (
-    <div className="w-full max-w-md mx-auto p-6">
-      <div className="bg-[#FFF5F7] rounded-3xl shadow-lg p-8">
-        <h1 className="text-3xl font-bold text-center mb-2 text-[#8B6F9C]">회원가입</h1>
-        <p className="text-center text-[#A98BB5] mb-8">환영합니다! 회원 정보를 입력해주세요</p>
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView contentContainerStyle={styles.scrollInner} showsVerticalScrollIndicator={false}>
+          <View style={styles.card}>
+            <Text style={styles.title}>회원가입</Text>
+            <Text style={styles.subtitle}>환영합니다! 회원 정보를 입력해주세요</Text>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          {/* 아이디 입력 */}
-          <div className="space-y-2">
-            <Label htmlFor="userId" className="text-[#8B6F9C]">아이디</Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input
-                  id="userId"
-                  type="text"
-                  value={userId}
-                  onChange={(e) => {
-                    setUserId(e.target.value);
-                    setIdCheckResult(null);
-                  }}
-                  placeholder="아이디를 입력하세요"
-                  className="bg-white border-[#E5D4ED] focus:border-[#B8A3C9] pr-10"
+            {/* 아이디 입력 영역 */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>아이디</Text>
+              <View style={styles.row}>
+                <View style={styles.flexInputWrapper}>
+                  <TextInput
+                    style={styles.input}
+                    value={userId}
+                    onChangeText={(text) => {
+                      setUserId(text);
+                      setIdCheckResult(null);
+                    }}
+                    placeholder="아이디를 입력하세요"
+                    placeholderTextColor="#A98BB5"
+                    autoCapitalize="none"
+                  />
+                  {idCheckResult && (
+                    <View style={styles.statusIcon}>
+                      {idCheckResult === 'available' ? 
+                        <CheckCircle2 size={18} color="#7BC4A4" /> : 
+                        <XCircle size={18} color="#F5A3A3" />
+                      }
+                    </View>
+                  )}
+                </View>
+                <TouchableOpacity 
+                  style={[styles.checkButton, (!userId || isCheckingId) && styles.disabledButton]} 
+                  onPress={handleCheckId}
+                  disabled={isCheckingId || !userId}
+                >
+                  <Text style={styles.checkButtonText}>{isCheckingId ? '확인중' : '중복 확인'}</Text>
+                </TouchableOpacity>
+              </View>
+              {idCheckResult && (
+                <Text style={[styles.helperText, { color: idCheckResult === 'available' ? '#7BC4A4' : '#F5A3A3' }]}>
+                  {idCheckResult === 'available' ? '사용 가능한 아이디입니다.' : '이미 사용중인 아이디입니다.'}
+                </Text>
+              )}
+            </View>
+
+            {/* 비밀번호 입력 */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>비밀번호</Text>
+              <View style={styles.passwordWrapper}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  placeholder="비밀번호를 입력하세요"
+                  placeholderTextColor="#A98BB5"
                 />
-                {idCheckResult && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {idCheckResult === 'available' ? (
-                      <CheckCircle2 className="w-5 h-5 text-[#A8D5BA]" />
-                    ) : (
-                      <XCircle className="w-5 h-5 text-[#F5A3A3]" />
-                    )}
-                  </div>
-                )}
-              </div>
-              <Button
-                type="button"
-                onClick={handleCheckId}
-                disabled={isCheckingId || !userId}
-                className="bg-[#B8A3C9] hover:bg-[#A890B8] text-white px-4 whitespace-nowrap"
-              >
-                {isCheckingId ? '확인중...' : '중복 확인'}
-              </Button>
-            </div>
-            {idCheckResult && (
-              <p className={`text-sm ${idCheckResult === 'available' ? 'text-[#7BC4A4]' : 'text-[#F5A3A3]'}`}>
-                {idCheckResult === 'available' ? '사용 가능한 아이디입니다.' : '이미 사용중인 아이디입니다.'}
-              </p>
-            )}
-          </div>
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                  {showPassword ? <EyeOff size={20} color="#B8A3C9" /> : <Eye size={20} color="#B8A3C9" />}
+                </TouchableOpacity>
+              </View>
+            </View>
 
-          {/* 비밀번호 입력 */}
-          <div className="space-y-2">
-            <Label htmlFor="password" className="text-[#8B6F9C]">비밀번호</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="비밀번호를 입력하세요"
-                className="bg-white border-[#E5D4ED] focus:border-[#B8A3C9] pr-10"
+            {/* 비밀번호 확인 */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>비밀번호 확인</Text>
+              <View style={styles.passwordWrapper}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showConfirmPassword}
+                  placeholder="비밀번호를 다시 입력하세요"
+                  placeholderTextColor="#A98BB5"
+                />
+                <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={styles.eyeIcon}>
+                  {showConfirmPassword ? <EyeOff size={20} color="#B8A3C9" /> : <Eye size={20} color="#B8A3C9" />}
+                </TouchableOpacity>
+              </View>
+              {confirmPassword !== '' && password !== confirmPassword && (
+                <Text style={styles.errorText}>비밀번호가 일치하지 않습니다.</Text>
+              )}
+            </View>
+
+            {/* 이메일 입력 */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>이메일</Text>
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="이메일을 입력하세요"
+                placeholderTextColor="#A98BB5"
+                keyboardType="email-address"
+                autoCapitalize="none"
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B8A3C9] hover:text-[#A890B8]"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
+            </View>
 
-          {/* 비밀번호 확인 */}
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword" className="text-[#8B6F9C]">비밀번호 확인</Label>
-            <div className="relative">
-              <Input
-                id="confirmPassword"
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="비밀번호를 다시 입력하세요"
-                className="bg-white border-[#E5D4ED] focus:border-[#B8A3C9] pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B8A3C9] hover:text-[#A890B8]"
-              >
-                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-            {confirmPassword && password !== confirmPassword && (
-              <p className="text-sm text-[#F5A3A3]">비밀번호가 일치하지 않습니다.</p>
-            )}
-          </div>
+            <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+              <Text style={styles.submitButtonText}>회원가입</Text>
+            </TouchableOpacity>
 
-          {/* 이메일 입력 */}
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-[#8B6F9C]">이메일</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="이메일을 입력하세요"
-              className="bg-white border-[#E5D4ED] focus:border-[#B8A3C9]"
-            />
-          </div>
+            {/* <View style={styles.dividerRow}>
+              <View style={styles.line} />
+              <Text style={styles.dividerText}>또는</Text>
+              <View style={styles.line} />
+            </View> */}
 
-          {/* 회원가입 버튼 */}
-          <Button
-            type="submit"
-            className="w-full bg-[#B8A3C9] hover:bg-[#A890B8] text-white h-12 text-base font-semibold"
-          >
-            회원가입
-          </Button>
-        </form>
+            {/* 소셜 가입 버튼 */}
+            {/* <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#FEE500' }]}>
+              <Text style={[styles.socialText, { color: '#3C1E1E' }]}>카카오로 가입하기</Text>
+            </TouchableOpacity>
 
-        {/* 구분선 */}
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[#E5D4ED]"></div>
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-[#FFF5F7] text-[#A98BB5]">또는</span>
-          </div>
-        </div>
+            <TouchableOpacity style={[styles.socialButton, { backgroundColor: '#03C75A', marginTop: 10 }]}>
+              <Text style={[styles.socialText, { color: 'white' }]}>네이버로 가입하기</Text>
+            </TouchableOpacity> */}
 
-        {/* 소셜 로그인 */}
-        <div className="space-y-3">
-          <Button
-            type="button"
-            onClick={handleKakaoSignup}
-            className="w-full bg-[#FEE500] hover:bg-[#FDD835] text-[#3C1E1E] h-12 font-semibold"
-          >
-            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M12 3C6.5 3 2 6.6 2 11c0 2.8 1.9 5.3 4.8 6.7-.2.7-.6 2.1-.7 2.5 0 .1-.1.3 0 .4.1.1.2.1.3.1.3-.1 2.4-1.6 2.8-1.9.6.1 1.2.2 1.8.2 5.5 0 10-3.6 10-8S17.5 3 12 3z"/>
-            </svg>
-            카카오로 가입하기
-          </Button>
-
-          <Button
-            type="button"
-            onClick={handleNaverSignup}
-            className="w-full bg-[#03C75A] hover:bg-[#02B350] text-white h-12 font-semibold"
-          >
-            <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="white">
-              <path d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727v12.845z"/>
-            </svg>
-            네이버로 가입하기
-          </Button>
-        </div>
-
-        {/* 로그인 링크 */}
-        <p className="text-center mt-6 text-[#A98BB5]">
-          이미 계정이 있으신가요?{' '}
-          <button className="text-[#8B6F9C] font-semibold hover:underline">
-            로그인
-          </button>
-        </p>
-      </div>
-    </div>
+            <TouchableOpacity onPress={() => navigation.navigate('Login')} style={styles.footer}>
+              <Text style={styles.footerText}>이미 계정이 있으신가요? <Text style={styles.loginLink}>로그인</Text></Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#fff' },
+  scrollInner: { padding: 20, justifyContent: 'center' },
+  card: { backgroundColor: '#FFF5F7', borderRadius: 30, padding: 25, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 },
+  title: { fontSize: 26, fontWeight: 'bold', color: '#8B6F9C', textAlign: 'center' },
+  subtitle: { fontSize: 13, color: '#A98BB5', textAlign: 'center', marginBottom: 25, marginTop: 5 },
+  inputGroup: { marginBottom: 15 },
+  label: { fontSize: 14, color: '#8B6F9C', marginBottom: 6, fontWeight: '600' },
+  row: { flexDirection: 'row', gap: 8 },
+  flexInputWrapper: { flex: 1, position: 'relative', justifyContent: 'center' },
+  input: { backgroundColor: 'white', height: 48, borderRadius: 12, paddingHorizontal: 15, borderWidth: 1, borderColor: '#E5D4ED', color: '#333' },
+  statusIcon: { position: 'absolute', right: 12 },
+  checkButton: { backgroundColor: '#B8A3C9', borderRadius: 12, paddingHorizontal: 12, justifyContent: 'center', height: 48 },
+  checkButtonText: { color: 'white', fontWeight: 'bold', fontSize: 12 },
+  disabledButton: { backgroundColor: '#D4C4DD' },
+  helperText: { fontSize: 12, marginTop: 4, marginLeft: 2 },
+  errorText: { fontSize: 12, color: '#F5A3A3', marginTop: 4, marginLeft: 2 },
+  passwordWrapper: { flexDirection: 'row', alignItems: 'center' },
+  eyeIcon: { position: 'absolute', right: 15 },
+  submitButton: { backgroundColor: '#B8A3C9', height: 52, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
+  submitButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 20 },
+  line: { flex: 1, height: 1, backgroundColor: '#E5D4ED' },
+  dividerText: { marginHorizontal: 10, color: '#A98BB5', fontSize: 12 },
+  socialButton: { height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  socialText: { fontWeight: 'bold', fontSize: 14 },
+  footer: { marginTop: 25, alignItems: 'center' },
+  footerText: { color: '#A98BB5', fontSize: 14 },
+  loginLink: { color: '#8B6F9C', fontWeight: 'bold', textDecorationLine: 'underline' }
+});
 
 export default SignUpScreen;
