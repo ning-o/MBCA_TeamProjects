@@ -19,17 +19,20 @@ const { width, height } = Dimensions.get('window');
 
 export default function SubsMain() {
   return (
-    <View style={styles.container}>      
+    <View style={{flex:1}}>
       <Header/>
-      <View style={styles.mainbox}>        
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>              
-          <SubsMainList />          
-        </ScrollView>
+      <View style={styles.container}>            
+        <View style={styles.mainbox}>        
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>              
+            <SubsMainList />          
+          </ScrollView>
 
-        <Subsfooter />        
+          <Subsfooter />        
+        </View>      
       </View>
       <Footer />
     </View>
+    
   );
 }
 
@@ -51,7 +54,7 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {    
-    paddingTop: 55,    
+    paddingTop: 20,    
     paddingBottom:100,
     minHeight: '100%',
   },

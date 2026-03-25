@@ -15,7 +15,7 @@ const SubsRouter = () => {
         initialRouteName="Main"
         screenOptions={{
           // tabBarShowLabel: false, // 상단 탭 바 글자를 숨기고 싶을 때
-          // tabBarStyle: { height: 0 }, // 상단 탭 바 자체를 숨겨서 완전한 페이지 전환 느낌을 줄 때
+          tabBarStyle: { height: 0 }, // 상단 탭 바 자체를 숨겨서 완전한 페이지 전환 느낌을 줄 때
           swipeEnabled: true, // 옆으로 밀어서 넘기기 활성화 (기본값 true)
           animationEnabled: true, // 애니메이션 활성화
         }}
