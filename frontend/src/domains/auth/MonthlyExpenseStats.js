@@ -9,6 +9,8 @@ import {
   TextInput, 
 } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
+// [추가] useSafeAreaInsets : 기기별 노치 높이를 픽셀 단위로 가져오기 위해 추가
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Footer from '../../common/components/Footer'; // 사용 안 할 거면 지우셔도 됩니다
 
 const mockExpenses = [
@@ -28,6 +30,8 @@ const MonthlyExpenseStats = () => {
   const [endMonth, setEndMonth] = useState('2026-03');
   const [includeSubscription, setIncludeSubscription] = useState(true);
   const [includeRefrigerator, setIncludeRefrigerator] = useState(true);
+
+  const insets = useSafeAreaInsets(); // [추가] 노치 높이 계산
 
   const filteredExpenses = mockExpenses.filter((expense) => {
     const expenseMonth = expense.date.substring(0, 7);
@@ -164,7 +168,8 @@ const MonthlyExpenseStats = () => {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      {/* [수정] 기기별 노치에 대응하기 위해 paddingTop에 insets.top 추가 */}
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.headerTitle}>월간 절약 통계</Text>
       </View>
 
@@ -256,6 +261,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#2563eb',
     padding: 16,
+    // [수정] 내부 텍스트가 노치에 가려지지 않도록 패딩 높이 조절을 위해 고정 padding 보조
   },
   headerTitle: {
     fontSize: 20,

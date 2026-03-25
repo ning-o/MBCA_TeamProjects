@@ -64,7 +64,10 @@ const Footer = () => {
       </TouchableOpacity>
 
       {/* 마이페이지 버튼 */}
-      <TouchableOpacity style={styles.menuButton}>
+      <TouchableOpacity 
+        style={styles.menuButton}
+        onPress={() => navigation.navigate('Auth')}
+        >
         <View style={[styles.iconCircle, isActive('User') && styles.activeCircle]}>
           <User 
             size={24} 
