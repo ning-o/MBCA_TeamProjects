@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
   StyleSheet, 
@@ -13,23 +13,9 @@ import {
 import LOGO_IMAGES from './../SubsImageURL';
 
 // 새 컴포넌트 예시 (SubsChangeView.js 라고 가정)
-const SubsChangeList = ({ category, onBack }) => {
+const SubsChangeList = ({ category, onBack, onSelect }) => {
     
-    const templogo = ['netflix', 'disney']; // db에서 카테고리로 검색하여 로그 사진들 가져올 예정
-
-    const [selectedLogo, setSelectedLogo] = useState(null);
-    const [selectedDetail, setSelectedDetail] = useState(null);
-
-    const handlePriceSelect = async (price, index) => {
-        if (selectedPrice === price) {
-            setSelectedPrice(null);
-            setSelectedDetail(null);
-            return;
-        }
-
-        setSelectedPrice(price)
-        setSelectedDetail(tempdetail[index])
-    }    
+    const templogo = ['netflix', 'disney']; // db에서 카테고리(category)로 검색하여 로그 사진들 가져올 예정      
 
   return (
     <View style={styles.container}>
@@ -40,10 +26,12 @@ const SubsChangeList = ({ category, onBack }) => {
         >
             <View style={styles.logoListbox}>
                 {templogo.map((item, index) => (
-                    <View key={index} style={styles.logoList}>
-                        <View key={index}>
-                          <Image source={LOGO_IMAGES[item]} style={styles.imageLogo}></Image>
-                        </View>
+                    <View key={index} style={styles.logoList}>                        
+                        <TouchableOpacity key={index}                            
+                            onPress={() => onSelect(item)}
+                        >
+                            <Image source={LOGO_IMAGES[item]} style={styles.imageLogo}></Image>
+                        </TouchableOpacity>
                     </View>
                 ))}
             </View>

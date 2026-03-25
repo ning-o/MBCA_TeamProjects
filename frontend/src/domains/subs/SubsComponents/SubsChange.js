@@ -14,16 +14,25 @@ import LOGO_IMAGES from './../SubsImageURL';
 import SubsChangeList from './SubsChangeList';
 
 // 새 컴포넌트 예시 (SubsChangeView.js 라고 가정)
-const SubsChange = ({ data, onBack }) => {
-    
-    const tempprice = ['10000', '15000', '20000']; // db에서 구독 이름으로 검색하여 요금제 가져올 예정
-    const tempdetail = ['10000원짜리설명예정','20000원짜리설명예정', '30000원짜리설명예정']
+const SubsChange = ({ data, onBack }) => {        
+
+    // 임시 데이터 (DB 가져올 예정)
+    const priceData = {
+        netflix: { prices: ['9,500', '13,500', '17,000'], details: ['광고형', '스탠다드', '프리미엄'] },
+        disney: { prices: ['9,900', '13,900'], details: ['스탠다드', '프리미엄'] },
+        youtube: { prices: ['14,900'], details: ['프리미엄 단일 요금제'] },
+    };
 
     const [isChanging, setIsChanging] = useState(false);
     const [selectedPrice, setSelectedPrice] = useState(null);
     const [selectedDetail, setSelectedDetail] = useState(null);
+    const [selectedService, setselectedService] = useState({
+        name: data.name,
+        logo: data.logo,
+        price: data.price
+    });
 
-    const handlePriceSelect = async (price, index) => {
+    const handlePriceSelect = async (price, index, details) => {
         if (selectedPrice === price) {
             setSelectedPrice(null);
             setSelectedDetail(null);
@@ -31,13 +40,26 @@ const SubsChange = ({ data, onBack }) => {
         }
 
         setSelectedPrice(price)
-        setSelectedDetail(tempdetail[index])
+        setSelectedDetail(details[index])
     }
     
     // 요금제 변경시 (예정)
     const handlechangePrice = async (price, index) => {
 
     }
+
+    // 로고 변경 처리 함수
+    const handleServiceSelect = (logoName) => {
+        setselectedService({
+            name: logoName, // 예시: 이름을 대문자로
+            logo: logoName,
+            price: priceData[logoName]?.prices[0] || '0' // 첫 번째 요금제로 초기화
+        });
+        setIsChanging(false); // 리스트 닫기
+        setSelectedPrice(null); // 이전 선택 초기화
+    };
+
+    const currentPriceInfo = priceData[selectedService.logo] || { prices: [], details: [] };
 
   return (
     <View style={styles.container}>
@@ -72,11 +94,14 @@ const SubsChange = ({ data, onBack }) => {
             <>
             <View style={styles.bottomprice}>
                 {/* 구독 서비스 요금제 출력 */}
-                <View style={styles.bottompriceList}>                    
-                    {tempprice.map((item, index) => (
+                <View style={styles.bottompriceList}>
+                    <View style={{width:'100%', alignItems: 'center', borderBottomWidth:1}}>
+                        <Image source={LOGO_IMAGES[selectedService.logo]} style={[styles.imageLogo, {marginVertical:5}]}></Image>
+                    </View>
+                    {currentPriceInfo.prices.map((item, index) => (
                         <TouchableOpacity key={index}
                             style={[styles.bottompricebox, selectedPrice == item && { backgroundColor: '#aaa' }]}
-                            onPress={() => handlePriceSelect(item, index)}
+                            onPress={() => handlePriceSelect(item, index, currentPriceInfo.details)}
                         >
                             <Text>{item}</Text>
                         </TouchableOpacity>
@@ -101,6 +126,7 @@ const SubsChange = ({ data, onBack }) => {
                 <SubsChangeList
                 category={data.category} 
                 onBack={() => setIsChanging(false)} 
+                onSelect={handleServiceSelect}
                 />
             </View>
             )}
@@ -143,8 +169,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         flexDirection: 'row',
         height:50,
-        marginLeft:5,
-        borderBottomWidth: 1,
+        marginLeft:5,        
     },
 
     imageLogo:{
@@ -174,20 +199,21 @@ const styles = StyleSheet.create({
         flex:1,
         flexDirection: 'row',
         borderTopWidth:1,
-        marginLeft: -5,
+        // margin: ,
         
     },
 
     bottompriceList:{    
         borderRightWidth:1,
-        flex:1,        
+        flex:1,
         
     },
 
     bottompricebox:{    
         padding:3,    
         justifyContent: 'center', 
-        alignItems: 'center',     
+        alignItems: 'center', 
+        width: '100%',    
         borderBottomWidth:1,     
     },
 

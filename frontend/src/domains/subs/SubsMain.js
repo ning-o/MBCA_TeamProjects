@@ -46,7 +46,7 @@ const styles = StyleSheet.create({
 
   mainbox: {
     width:width,
-    height:height - 15,
+    height:height,
     backgroundColor: '#f8f9fa', // 아이폰 스타일의 연한 회색 배경    
     borderWidth: 1,
     overflow: 'hidden',
