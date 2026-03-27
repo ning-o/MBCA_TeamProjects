@@ -1,5 +1,6 @@
 import React from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView,useSafeAreaInsets } from 'react-native-safe-area-context';
+// [추가]useSafeAreaInsets : 현재 기기의 상, 하, 좌, 우 여백 값을 객체로 가져옴 (예: { top: 44, bottom: 34 ... }
 import { 
   StyleSheet, 
   Text, 
@@ -18,10 +19,16 @@ import Subsfooter from './SubsComponents/SubsFooter';
 const { width, height } = Dimensions.get('window');
 
 export default function SubsMain() {
+  const insets = useSafeAreaInsets(); // [추가] 기기별 상단 노치 높이 계산
+
   return (
     <View style={{flex:1}}>
       <Header/>
-      <View style={styles.container}>            
+      <View style={[
+        styles.container,
+        { paddingTop: insets.top + 56 } // [추가] insets.top은 위에서 얻어온 상단 노치 값 + 56은 헤더 높이 // 조절하고 싶으면 56 값 조절하시면 됨
+        ]}>  
+                  
         <View style={styles.mainbox}>        
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>              
             <SubsMainList />          
