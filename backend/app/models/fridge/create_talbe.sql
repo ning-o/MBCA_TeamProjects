@@ -14,6 +14,13 @@ CREATE TABLE refrigerator(
     current_spent INT NOT NULL,
     CONSTRAINT fk_refrigerator_users Foreign Key (nick_name) REFERENCES users(nick_name)
 );
+CREATE TABLE Pantry (
+    ingredient_id INT PRIMARY KEY, 
+    category VARCHAR(10) NOT NULL,         
+    ingredient_name VARCHAR(10) NOT NULL, 
+    storage_code INT NOT NULL,             
+    expiry_date INT NOT NULL               
+);
 
 CREATE TABLE ref_ingredients(
     ref_no INT AUTO_INCREMENT PRIMARY key,
@@ -52,16 +59,9 @@ CREATE TABLE Recipe_Ingredients (
     ingredient_id INT NOT NULL,            
     required_quantity INT NOT NULL,  
     main_ingredients TEXT NOT NULL,  
-    sub_ingredients TEXT NOT NULL,   
-    Seasonings TEXT NOT NULL,     
+    sub_ingredients TEXT ,   
+    Seasonings TEXT ,     
     CONSTRAINT fk_RecipeIngredients_recipe FOREIGN KEY (recipe_id) REFERENCES recipe(recipe_id),
     CONSTRAINT fk_RecipeIngredients_pantry FOREIGN KEY (ingredient_id) REFERENCES Pantry(ingredient_id)
 );
 
-CREATE TABLE Pantry (
-    ingredient_id INT PRIMARY KEY, 
-    category VARCHAR(10) NOT NULL,         
-    ingredient_name VARCHAR(10) NOT NULL, 
-    storage_code INT NOT NULL,             
-    expiry_date INT NOT NULL               
-);
