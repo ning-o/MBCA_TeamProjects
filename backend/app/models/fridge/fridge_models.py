@@ -20,7 +20,7 @@ class Pantry(db.Model):
     __tablename__ = 'pantry'
     ingredient_id = db.Column(db.Integer, primary_key=True)
     category = db.Column(db.String(10), nullable=False)
-    ingredient_name = db.Column(db.String(10), nullable=False)
+    ingredient_name = db.Column(db.String(50), nullable=False)
     storage_code = db.Column(db.Integer, nullable=False)
     expiry_date = db.Column(db.Integer, nullable=False)
 

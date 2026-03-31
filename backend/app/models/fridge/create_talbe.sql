@@ -47,9 +47,9 @@ CREATE TABLE phurchase_info(
 CREATE TABLE recipe(
     recipe_id INT AUTO_INCREMENT PRIMARY KEY,
     recipe_name VARCHAR(50) NOT NULL, 
-    difficulty VARCHAR(30) NOT NULL,
-    cooking_time VARCHAR(10) NOT NULL,
-    category VARCHAR(20) NOT NULL,
+    difficulty INT NOT NULL,
+    cooking_time INT NOT NULL,
+    category VARCHAR(20),
     INDEX(recipe_name)
 );
 
@@ -57,7 +57,7 @@ CREATE TABLE Recipe_Ingredients (
     no INT AUTO_INCREMENT PRIMARY KEY,    
     recipe_id INT NOT NULL,                   
     ingredient_id INT NOT NULL,            
-    required_quantity INT NOT NULL,  
+    required_quantity INT,  
     main_ingredients TEXT NOT NULL,  
     sub_ingredients TEXT ,   
     Seasonings TEXT ,     
