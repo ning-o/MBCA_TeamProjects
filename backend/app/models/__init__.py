@@ -5,3 +5,4 @@
 # 예시: from .fridge.models import Fridge (냉장고 파트 예시)
 
 from .common import User, TotalSaving, CommonCode
+from .subs.models import Subscriptions_user, Subscription_master, SubscriptionBundle, UserAmount
