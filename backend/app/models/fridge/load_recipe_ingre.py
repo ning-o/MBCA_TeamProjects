@@ -4,7 +4,7 @@ from pathlib import Path
 import pandas as pd
 from sqlalchemy import create_engine, text
 
-CSV_PATH = Path("/app/티끌최종레시피.csv")
+CSV_PATH = Path("/app/app/models/fridge/티끌최종레시피.csv")
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -102,7 +102,7 @@ def main():
             (recipe_id, ingredient_id)
             for recipe_id, ingredient_id in conn.execute(text("""
                 SELECT recipe_id, ingredient_id
-                FROM Recipe_Ingredients
+                FROM recipe_ingredients
             """)).fetchall()
         }
 
@@ -181,7 +181,7 @@ def main():
             return
 
         insert_sql = text("""
-            INSERT INTO Recipe_Ingredients (
+            INSERT INTO recipe_ingredients (
                 recipe_id,
                 ingredient_id,
                 required_quantity,
@@ -200,7 +200,6 @@ def main():
 
         conn.execute(insert_sql, rows)
 
-    print("✅ Recipe_Ingredients 적재 완료")
 
 
 if __name__ == "__main__":

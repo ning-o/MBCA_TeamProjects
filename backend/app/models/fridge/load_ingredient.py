@@ -4,9 +4,6 @@ from pathlib import Path
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 
-# =========================
-# 1. .env 로드
-# =========================
 env_path = Path(__file__).resolve().parents[4] / ".env"
 load_dotenv(env_path)
 
@@ -16,26 +13,8 @@ if not DATABASE_URL:
 
 print("DATABASE_URL:", DATABASE_URL)
 
-# =========================
-# 2. DB 연결
-# =========================
 engine = create_engine(DATABASE_URL, future=True)
 
-# =========================
-# 3. pantry 초기화 (원할 때만 사용)
-# =========================
-# RESET_TABLE = True
-
-# if RESET_TABLE:
-#     with engine.begin() as conn:
-#         conn.execute(text("SET FOREIGN_KEY_CHECKS = 0"))
-#         conn.execute(text("DELETE FROM pantry"))
-#         conn.execute(text("SET FOREIGN_KEY_CHECKS = 1"))
-#     print("🧹 pantry 테이블 데이터 삭제 완료")
-
-# =========================
-# 4. CSV 읽기
-# =========================
 BASE_DIR = Path(__file__).resolve().parent
 csv_path = BASE_DIR / "pantry_end.csv"
 
@@ -46,9 +25,6 @@ print("CSV PATH:", csv_path)
 
 df = pd.read_csv(csv_path)
 
-# =========================
-# 5. storage_type -> storage_code
-# =========================
 storage_map = {
     "냉장": 1,
     "냉동": 2,
@@ -65,14 +41,8 @@ if not invalid_storage.empty:
 
 df["storage_code"] = df["storage_code"].astype(int)
 
-# =========================
-# 6. expiry_date 기본값
-# =========================
 df["expiry_date"] = 0
 
-# =========================
-# 7. 필요한 컬럼만 정리
-# =========================
 required_columns = [
     "ingredient_id",
     "category",
@@ -87,9 +57,6 @@ if missing_cols:
 
 df = df[required_columns].copy()
 
-# =========================
-# 8. 문자열 정리
-# =========================
 df["ingredient_id"] = df["ingredient_id"].astype(int)
 df["category"] = df["category"].astype(str).str.strip()
 df["ingredient_name"] = df["ingredient_name"].astype(str).str.strip()
@@ -104,9 +71,6 @@ if (df["ingredient_name"] == "").any():
     print(bad_rows.head())
     raise ValueError("ingredient_name 빈값이 있습니다.")
 
-# =========================
-# 9. 중복 체크
-# =========================
 dup_id = df["ingredient_id"].duplicated().sum()
 print(f"ingredient_id 중복 개수: {dup_id}")
 
@@ -123,16 +87,10 @@ if dup_name > 0:
     print(df[df["ingredient_name"].duplicated(keep=False)].sort_values("ingredient_name").head(20))
     raise ValueError("ingredient_name 중복이 있습니다.")
 
-# =========================
-# 10. 데이터 미리보기
-# =========================
 print("데이터 샘플:")
 print(df.head())
 print("총 개수:", len(df))
 
-# =========================
-# 11. INSERT
-# =========================
 rows = df.to_dict(orient="records")
 
 insert_sql = text("""
@@ -153,5 +111,3 @@ insert_sql = text("""
 
 with engine.begin() as conn:
     conn.execute(insert_sql, rows)
-
-print("✅ pantry 테이블 적재 완료")

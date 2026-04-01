@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, text
 
 
 BASE_DIR = Path(__file__).resolve().parent
-CSV_PATH = Path("/app/티끌최종레시피.csv")
+CSV_PATH = Path("/app/app/models/fridge/티끌최종레시피.csv")
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
@@ -34,12 +34,14 @@ def build_rows(df):
     rows = []
 
     for _, row in df.iterrows():
+        recipe_id = normalize_int(row.get("recipe_id"), 0)
         reicpe_name = clean_text(row.get("recipe_name"))
-        difficulty = clean_text(row.get("difficulty"))
+        difficulty = normalize_int(row.get("difficulty"),1)
         cooking_time = normalize_int(row.get("cooking_time"), 0)
         category = clean_text(row.get("category"))
 
         rows.append({
+            "recipe_id": recipe_id,
             "recipe_name": reicpe_name,
             "difficulty": difficulty,
             "cooking_time": cooking_time,

@@ -14,9 +14,9 @@ CREATE TABLE refrigerator(
     current_spent INT NOT NULL,
     CONSTRAINT fk_refrigerator_users Foreign Key (nick_name) REFERENCES users(nick_name)
 );
-CREATE TABLE Pantry (
+CREATE TABLE pantry (
     ingredient_id INT PRIMARY KEY, 
-    category VARCHAR(10) NOT NULL,         
+    category VARCHAR(20) NOT NULL,         
     ingredient_name VARCHAR(10) NOT NULL, 
     storage_code INT NOT NULL,             
     expiry_date INT NOT NULL               
@@ -53,7 +53,7 @@ CREATE TABLE recipe(
     INDEX(recipe_name)
 );
 
-CREATE TABLE Recipe_Ingredients (
+CREATE TABLE recipe_ingredients (
     no INT AUTO_INCREMENT PRIMARY KEY,    
     recipe_id INT NOT NULL,                   
     ingredient_id INT NOT NULL,            
