@@ -6,7 +6,7 @@ from sqlalchemy import create_engine, text
 
 
 BASE_DIR = Path(__file__).resolve().parent
-CSV_PATH = Path("/app/app/crud/fridge티끌최종레시피.csv")
+CSV_PATH = Path("/app/app/crud/fridge/티끌최종레시피.csv")
 
 DATABASE_URL = os.getenv(
     "DATABASE_URL",

@@ -94,7 +94,7 @@ print("총 개수:", len(df))
 rows = df.to_dict(orient="records")
 
 insert_sql = text("""
-    INSERT INTO pantry (
+    INSERT IGNORE INTO pantry (
         ingredient_id,
         category,
         ingredient_name,
