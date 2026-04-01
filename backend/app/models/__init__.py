@@ -14,3 +14,9 @@ from .fridge.fridge_models import (
     Recipe, 
     RecipeIngredients
 )
+from .subs.subs_models import (
+    SubsMaster,
+    SubsBundle,
+    SubsUser,
+    SubsUserAmount
+)

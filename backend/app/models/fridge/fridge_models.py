@@ -14,10 +14,11 @@ class Refrigerator(Base):
     __tablename__ = 'refrigerator'
     
     inven_id = Column(Integer, primary_key=True, autoincrement=True)
-    nick_name = Column(String(30), ForeignKey('users.nick_name'), nullable=False)
+    # nick_name = Column(String(20), ForeignKey('users.nick_name'), nullable=False) # [삭제]
     inven_nickname = Column(String(30))
     mounth_food_exp = Column(Integer, default=0)
     current_spent = Column(Integer, nullable=False, default=0)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False) # [추가] FK) nick_name --> user_id로 변경
 
     # 관계 설정 (필요 시)
     ingredients = relationship("RefIngredients", back_populates="refrigerator")
