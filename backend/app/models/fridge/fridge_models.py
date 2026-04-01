@@ -77,4 +77,4 @@ class RecipeIngredients(Base):
     required_quantity = Column(Integer, nullable=True)
     main_ingredients = Column(Text, nullable=False)
     sub_ingredients = Column(Text, nullable=True)
-    Seasonings = Column(Text, nullable=True) # SQL 컬럼명 대문자 유지
+    Seasonings = Column(Text, nullable=True)
