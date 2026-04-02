@@ -13,7 +13,7 @@ if not DATABASE_URL:
     raise ValueError("DATABASE_URL 환경변수를 찾을 수 없습니다.")
 
 BASE_DIR = Path(__file__).resolve().parent
-CSV_PATH = BASE_DIR / "pantry_end.csv"
+CSV_PATH = BASE_DIR / "pantry.csv"
 
 STORAGE_MAP = {
     "냉장": 1,
