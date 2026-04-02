@@ -21,5 +21,3 @@ from .subs.subs_models import (
     SubscriptionBundle,
     UserAmount
 )
-
-from .subs.models import Subscriptions_user, Subscription_master, SubscriptionBundle, UserAmount
