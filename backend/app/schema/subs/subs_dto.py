@@ -11,12 +11,15 @@ class UserSubsInsert(BaseModel):
     payment_date: int
 
 # 사용자 구독 - 사용자의 구독 정보 가져오기
-class UserSubsInsert(BaseModel):    
+class UserSubsResponse(BaseModel):
     user_id: int
     master_id: Optional[int] = None
     bundle_id: Optional[int] = None
     payment_date: int
     is_auto_pay: bool
+
+    class Config:
+        orm_mode = True
 
 
 # 구독 서비스 정보 넣기 (직접 입력)
@@ -38,9 +41,26 @@ class SubsResponse(BaseModel):
     class Config:
         orm_mode = True
  
+# 구독 서비스 카테고리들 가져오기
+class SubsLogoResponse(BaseModel):    
+    logo_img: str
+    category: str
 
-# 구독 금액 데이터 변경시
-class SubsAmount(BaseModel):
+    class Config:
+        orm_mode = True
+
+# 구독 금액 데이터 - 변경시
+class SubsAmountInsert(BaseModel):
+    user_id: int
+    category: str
+    amount: int
+    save_at: datetime
+
+    class Config:
+        orm_mode = True
+
+# 구독 금액 데이터 - 조회
+class SubsAmountResponse(BaseModel):
     user_id: int
     category: str
     amount: int
