@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Date, JSON, Text, CHAR, Index
 from sqlalchemy.orm import relationship
-from app.core.database import Base  # 보통 database.py에서 Base = declarative_base()를 가져옵니다.
+from app.core.database import Base
+
 
 class RefAdmin(Base):
     __tablename__ = 'ref_admin'
@@ -8,35 +9,59 @@ class RefAdmin(Base):
     admin_no = Column(Integer, primary_key=True, autoincrement=True)
     is_admin = Column(Boolean, nullable=False, default=False)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    inven_id = Column(Integer, nullable=False)
+    inven_id = Column(Integer, ForeignKey('refrigerator.inven_id'), nullable=False)
+    refrigerator = relationship("Refrigerator", back_populates="admins")
+
 
 class Refrigerator(Base):
     __tablename__ = 'refrigerator'
     
     inven_id = Column(Integer, primary_key=True, autoincrement=True)
-    # nick_name = Column(String(20), ForeignKey('users.nick_name'), nullable=False) # [삭제]
     inven_nickname = Column(String(30))
     mounth_food_exp = Column(Integer, default=0)
     current_spent = Column(Integer, nullable=False, default=0)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False) # [추가] FK) nick_name --> user_id로 변경
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
 
-    # 관계 설정 (필요 시)
-    ingredients = relationship("RefIngredients", back_populates="refrigerator")
+    ingredients = relationship(
+        "RefIngredients",
+        back_populates="refrigerator",
+        cascade="all, delete-orphan"
+    )
+    admins = relationship(
+        "RefAdmin",
+        back_populates="refrigerator",
+        cascade="all, delete-orphan"
+    )
+
 
 class Pantry(Base):
     __tablename__ = 'pantry'
     
-    ingredient_id = Column(Integer, primary_key=True) # SQL에 따라 수동 ID 입력
+    ingredient_id = Column(Integer, primary_key=True)
     category = Column(String(20), nullable=False)
     ingredient_name = Column(String(10), nullable=False)
     storage_code = Column(Integer, nullable=False)
     expiry_date = Column(Integer, nullable=False)
 
+    ref_ingredients = relationship(
+        "RefIngredients",
+        back_populates="pantry"
+    )
+    purchase_infos = relationship(
+        "PurchaseInfo",
+        back_populates="pantry"
+    )
+    recipe_ingredients = relationship(
+        "RecipeIngredients",
+        back_populates="pantry"
+    )
+
+
 class RefIngredients(Base):
     __tablename__ = 'ref_ingredients'
     
     ref_no = Column(Integer, primary_key=True, autoincrement=True)
-    inven_id = Column(Integer, ForeignKey('refrigerator.inven_id'))
+    inven_id = Column(Integer, ForeignKey('refrigerator.inven_id'), nullable=False)
     ingredient_id = Column(Integer, ForeignKey('pantry.ingredient_id'), nullable=False)
     storage_type = Column(CHAR(1), nullable=False)
     d_days = Column(Date, nullable=False)
@@ -44,16 +69,21 @@ class RefIngredients(Base):
     phurchase_date = Column(Date, nullable=False)
 
     refrigerator = relationship("Refrigerator", back_populates="ingredients")
+    pantry = relationship("Pantry", back_populates="ref_ingredients")
 
-class PurchaseInfo(Base):
+
+class PhurchaseInfo(Base):
     __tablename__ = 'phurchase_info'
     
-    phurchase_id = Column(Integer, primary_key=True)
+    phurchase_id = Column(Integer, primary_key=True, autoincrement=True)
     raw_item_name = Column(JSON, nullable=False)
-    matched_ingredient_id = Column(Integer, ForeignKey('pantry.ingredient_id'), nullable=False)
+    matched_ingredient_id = Column(Integer, ForeignKey('pantry.ingredient_id'), nullable=True)
     quantity_bill = Column(Integer, nullable=False)
     after_price = Column(Integer, nullable=False)
     phurchase_date = Column(Date, nullable=False)
+
+    pantry = relationship("Pantry", back_populates="purchase_infos")
+
 
 class Recipe(Base):
     __tablename__ = 'recipe'
@@ -64,10 +94,16 @@ class Recipe(Base):
     cooking_time = Column(Integer, nullable=False)
     category = Column(String(20))
 
-    # 레시피 이름으로 검색이 많으므로 인덱스 설정
     __table_args__ = (
         Index('idx_recipe_name', 'recipe_name'),
     )
+
+    recipe_ingredients = relationship(
+        "RecipeIngredients",
+        back_populates="recipe",
+        cascade="all, delete-orphan"
+    )
+
 
 class RecipeIngredients(Base):
     __tablename__ = 'recipe_ingredients'
@@ -79,3 +115,6 @@ class RecipeIngredients(Base):
     main_ingredients = Column(Text, nullable=False)
     sub_ingredients = Column(Text, nullable=True)
     Seasonings = Column(Text, nullable=True)
+
+    recipe = relationship("Recipe", back_populates="recipe_ingredients")
+    pantry = relationship("Pantry", back_populates="recipe_ingredients")
