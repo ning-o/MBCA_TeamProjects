@@ -1,14 +1,14 @@
--- SET FOREIGN_KEY_CHECKS = 0;
+SET FOREIGN_KEY_CHECKS = 0;
 
--- DROP TABLE IF EXISTS recipe_ingredients;
--- DROP TABLE IF EXISTS recipe;
--- DROP TABLE IF EXISTS phurchase_info;
--- DROP TABLE IF EXISTS ref_ingredients;
--- DROP TABLE IF EXISTS ref_admin;
--- DROP TABLE IF EXISTS pantry;
--- DROP TABLE IF EXISTS refrigerator;
+DROP TABLE IF EXISTS recipe_ingredients;
+DROP TABLE IF EXISTS recipe;
+DROP TABLE IF EXISTS phurchase_info;
+DROP TABLE IF EXISTS ref_ingredients;
+DROP TABLE IF EXISTS ref_admin;
+DROP TABLE IF EXISTS pantry;
+DROP TABLE IF EXISTS refrigerator;
 
--- SET FOREIGN_KEY_CHECKS = 1;
+SET FOREIGN_KEY_CHECKS = 1;
 
 
 CREATE TABLE refrigerator (
@@ -24,8 +24,8 @@ CREATE TABLE refrigerator (
 
 CREATE TABLE pantry (
     ingredient_id INT PRIMARY KEY,
-    category VARCHAR(20) NOT NULL,
-    ingredient_name VARCHAR(10) NOT NULL,
+    category VARCHAR(30) NOT NULL,
+    ingredient_name VARCHAR(30) NOT NULL,
     storage_code INT NOT NULL,
     expiry_date INT NOT NULL
 );
@@ -75,7 +75,7 @@ CREATE TABLE recipe (
     recipe_name VARCHAR(50) NOT NULL,
     difficulty INT NOT NULL,
     cooking_time INT NOT NULL,
-    category VARCHAR(20),
+    category VARCHAR(30),
     INDEX idx_recipe_name (recipe_name)
 );
 

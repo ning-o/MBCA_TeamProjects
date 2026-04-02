@@ -38,8 +38,8 @@ class Pantry(Base):
     __tablename__ = 'pantry'
     
     ingredient_id = Column(Integer, primary_key=True)
-    category = Column(String(20), nullable=False)
-    ingredient_name = Column(String(10), nullable=False)
+    category = Column(String(30), nullable=False)
+    ingredient_name = Column(String(30), nullable=False)
     storage_code = Column(Integer, nullable=False)
     expiry_date = Column(Integer, nullable=False)
 
@@ -92,7 +92,7 @@ class Recipe(Base):
     recipe_name = Column(String(50), nullable=False)
     difficulty = Column(Integer, nullable=False)
     cooking_time = Column(Integer, nullable=False)
-    category = Column(String(20))
+    category = Column(String(30))
 
     __table_args__ = (
         Index('idx_recipe_name', 'recipe_name'),
