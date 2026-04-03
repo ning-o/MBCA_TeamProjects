@@ -4,7 +4,7 @@ services:
     container_name: tikkle_mysql
     restart: always
     env_file:
-      - ./.env  # .env 파일에서 변수 읽어오기
+      - ./.env
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_USER: ${MYSQL_USER}
@@ -20,11 +20,14 @@ services:
     container_name: tikkle_api
     restart: always
     env_file:
-      - ./.env  # 백엔드 서버도 DB 비번을 알아야 하니 연동
+      - ./.env
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /app/secrets/google-vision-key.json
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
+      - ./secrets/google-vision-key.json:/backend/secrets/google-vision-key.json:ro
     working_dir: /app
     depends_on:
       - db

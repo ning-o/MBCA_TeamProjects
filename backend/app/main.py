@@ -35,3 +35,18 @@ def read_root():
 app.include_router(fridge.router, prefix="/api/fridge", tags=["Fridge"])
 app.include_router(subs.router, prefix="/api/subs", tags=["Subs"])
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
+
+
+#===============================================================================================
+# OCR 테스트용
+from app.api.fridge import fridge
+from app.api.fridge.ocr import router as fridge_ocr_router
+from app.api.subs import subs
+from app.api.auth import auth
+
+app = FastAPI(title="Tikkle Project API")
+
+app.include_router(fridge.router, prefix="/api/fridge", tags=["Fridge"])
+app.include_router(fridge_ocr_router, prefix="/api/fridge", tags=["Fridge OCR"])
+app.include_router(subs.router, prefix="/api/subs", tags=["Subs"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])

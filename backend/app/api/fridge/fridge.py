@@ -78,3 +78,5 @@ def list_pantry(db: Session = Depends(get_db)):
     """
     items = db.query(fridge_models.Pantry).all()
     return {"status": "success", "count": len(items), "data": items}
+
+
