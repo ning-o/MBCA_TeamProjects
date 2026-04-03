@@ -23,11 +23,11 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Tikkle Project API")
 
 # [루트 경로] 서버 정상 작동 확인용
-@app.get("/")
+@app.get("/", tags=["Root"])
 def read_root():
     return {
         "status": "online",
-        "message": "도커 서버 정상 작동 중이며, 모든 도메인 테이블 생성이 완료되었습니다."
+        "message": "TIKKLE API Server is running"
     }
 
 # [도메인 연결] prefix와 tags를 설정하여 Swagger 문서에서 그룹화

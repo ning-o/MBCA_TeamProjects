@@ -48,7 +48,7 @@ class Pantry(Base):
         back_populates="pantry"
     )
     purchase_infos = relationship(
-        "PurchaseInfo",
+        "PhurchaseInfo",
         back_populates="pantry"
     )
     recipe_ingredients = relationship(
@@ -64,7 +64,7 @@ class RefIngredients(Base):
     inven_id = Column(Integer, ForeignKey('refrigerator.inven_id'), nullable=False)
     ingredient_id = Column(Integer, ForeignKey('pantry.ingredient_id'), nullable=False)
     storage_type = Column(CHAR(1), nullable=False)
-    d_days = Column(Date, nullable=False)
+    d_days = Column(Date, nullable=True)
     quantity = Column(Integer, nullable=False)
     phurchase_date = Column(Date, nullable=False)
 

@@ -11,7 +11,7 @@ from .fridge.fridge_models import (
     Refrigerator, 
     Pantry, 
     RefIngredients, 
-    PurchaseInfo, 
+    PhurchaseInfo, 
     Recipe, 
     RecipeIngredients
 )
