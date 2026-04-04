@@ -1,99 +1,298 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
 
 const { height } = Dimensions.get('window');
 
-const RecipeScreen = () => {
-  const navigation = useNavigation();
+// Android Emulator: http://10.0.2.2:8000
+// iOS Simulator: http://localhost:8000
+// 실제 기기: http://내PC로컬IP:8000
+const SERVER_URL = 'http://192.168.35.167:8000';
 
-  const recipeData = {
-    title: "짜장라면",
-    matchRate: "76%",
-    tags: ["#면", "#평균 6000원"],
-    time: "10 mins",
-    difficulty: "보통",
-    aiReason: "맑은 날(맑음 (선선함))엔 상쾌한 짜장라면이 딱이에요! 냉장고에 있는 남은 양파를 처리하기에도 가장 좋은 메뉴입니다.",
-    details: "1. 물 550ml를 끓입니다.\n2. 면과 건더기 스프를 넣고 5분 더 끓입니다.\n3. 물을 8스푼 남기고 버린 후 짜장 스프와 유성 스프를 넣어 비벼주세요.\n4. 기호에 따라 볶은 양파나 계란 후라이를 곁들이면 더 맛있습니다.",
-    ingredients: [
-      { id: 1, name: "짜장라면 1봉", checked: true },
-      { id: 2, name: "양파 1/4개", checked: false },
-      { id: 3, name: "계란 1알", checked: true },
-    ]
+body: JSON.stringify({
+  input_stock: {
+    계란: 2,
+    양파: 5,
+    대파: 3,
+    간장: 30,
+    참기름: 60,
+  },
+  top_k: 5,
+})
+
+const RecipeScreen = () => {
+  const [loading, setLoading] = useState(true);
+  const [recipes, setRecipes] = useState([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const fetchRecommendations = async () => {
+  let timeoutId;
+
+  try {
+    console.log("[1] 추천 버튼 눌림");
+    setLoading(true);
+
+    const controller = new AbortController();
+    timeoutId = setTimeout(() => {
+      console.log("[2] 8초 타임아웃 - 요청 강제 중단");
+      controller.abort();
+    }, 8000);
+
+    const url = `${SERVER_URL}/api/fridge/recommend/test`;
+    const payload = {
+    input_stock: {
+      계란: 2,
+      양파: 5,
+      대파: 3,
+      간장: 30,
+      참기름: 60,
+    },
+    top_k: 5,
+    };
+
+    console.log("[3] 요청 URL:", url);
+    console.log("[4] 요청 body:", JSON.stringify(payload));
+
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    console.log("[5] 응답 도착");
+    console.log("[6] status:", response.status);
+
+    const rawText = await response.text();
+    console.log("[7] rawText:", rawText);
+
+    const data = rawText ? JSON.parse(rawText) : {};
+    console.log("[8] parsed data:", data);
+
+    setRecipes(data.recommendations || []);
+    setSelectedIndex(0);
+  } catch (error) {
+    console.log("[ERROR] fetchRecommendations:", error);
+    Alert.alert("오류", String(error));
+  } finally {
+    clearTimeout(timeoutId);
+    console.log("[9] finally 진입 - 로딩 해제");
+    setLoading(false);
+  }
+};
+
+  useEffect(() => {
+    fetchRecommendations();
+  }, []);
+
+  const selectedRecipe = recipes[selectedIndex] || null;
+
+  const matchRateText = useMemo(() => {
+    if (!selectedRecipe) return '0%';
+    return `${Math.round((selectedRecipe.score || 0) * 100)}%`;
+  }, [selectedRecipe]);
+
+  const ingredientItems = useMemo(() => {
+    if (!selectedRecipe) return [];
+
+    const matched = (selectedRecipe.matched_ingredients || []).map((name, idx) => ({
+      id: `matched-${idx}`,
+      name,
+      checked: true,
+    }));
+
+    const missing = (selectedRecipe.missing_ingredients || []).map((name, idx) => ({
+      id: `missing-${idx}`,
+      name,
+      checked: false,
+    }));
+
+    return [...matched, ...missing];
+  }, [selectedRecipe]);
+
+  const aiReason = useMemo(() => {
+    if (!selectedRecipe) return '추천 결과가 없습니다.';
+
+    const daysLeftText =
+      selectedRecipe.days_left != null
+        ? `${selectedRecipe.days_left}일 안에 활용 추천`
+        : '빠르게 활용 추천';
+
+    const matchedText =
+      selectedRecipe.matched_ingredients?.length > 0
+        ? selectedRecipe.matched_ingredients.join(', ')
+        : '현재 보유 재료';
+
+    return `현재 재료와의 매칭률이 높습니다. 특히 ${matchedText}를 바로 활용할 수 있고, ${daysLeftText} 기준 테스트 추천 레시피입니다.`;
+  }, [selectedRecipe]);
+
+  const recipeSteps = useMemo(() => {
+    if (!selectedRecipe) return '레시피 설명이 없습니다.';
+
+    const missing =
+      selectedRecipe.missing_ingredients?.length > 0
+        ? selectedRecipe.missing_ingredients.join(', ')
+        : '없음';
+
+    return [
+      `1. 추천 레시피: ${selectedRecipe.recipe_name || '-'}`,
+      `2. 현재 보유 재료를 먼저 준비합니다: ${(selectedRecipe.matched_ingredients || []).join(', ') || '-'}`,
+      `3. 부족한 재료가 있다면 추가 준비합니다: ${missing}`,
+      `4. 조리시간은 ${selectedRecipe.cooking_time ?? '-'}분, 난이도는 ${selectedRecipe.difficulty ?? '-'}입니다.`,
+      `5. 현재 단계는 테스트 화면이므로 상세 조리법 대신 추천 결과를 우선 검증합니다.`,
+    ].join('\n');
+  }, [selectedRecipe]);
+
+  const tags = useMemo(() => {
+    if (!selectedRecipe) return [];
+    return [
+      selectedRecipe.category ? `#${selectedRecipe.category}` : '#추천',
+      selectedRecipe.cooking_time ? `#${selectedRecipe.cooking_time}분` : '#시간미정',
+      selectedRecipe.days_left != null ? `#${selectedRecipe.days_left}일내활용` : '#테스트',
+    ];
+  }, [selectedRecipe]);
+
+  const handleComplete = () => {
+    Alert.alert('테스트', '지금은 추천 화면 연결 테스트 단계입니다.');
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* ✅ 1. 공통 헤더 적용 */}
       <Header />
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 헤더 공간 확보 (헤더가 절대 위치일 경우 대비) */}
         <View style={{ height: 60 }} />
 
-        {/* 추천 카드 영역 (상단 고정에서 스크롤 내부로 이동하거나 유지 선택 가능) */}
-        <View style={styles.recommendCard}>
-          <View style={styles.cardHeader}>
-            <View style={styles.rankBadge}><Text style={styles.rankText}>1위</Text></View>
-            <Text style={styles.matchText}>매칭률 <Text style={styles.matchPercent}>{recipeData.matchRate}</Text></Text>
-          </View>
-          <View style={styles.cardMain}>
-            <Text style={styles.foodTitle}>{recipeData.title}</Text>
-            <View style={styles.tagRow}>
-              {recipeData.tags.map((tag, i) => <Text key={i} style={styles.tagText}>{tag} </Text>)}
-            </View>
-            <Text style={styles.infoText}>⏱ {recipeData.time}  |  난이도 : {recipeData.difficulty}</Text>
-          </View>
-        </View>
+        <TouchableOpacity style={styles.reloadButton} onPress={fetchRecommendations}>
+          <Text style={styles.reloadButtonText}>추천 다시 불러오기</Text>
+        </TouchableOpacity>
 
-        {/* 상세 내용 영역 */}
-        <View style={styles.bottomSheet}>
-          {/* AI Pick 이유 */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>AI's Pick Reason</Text>
-            <View style={styles.aiBubble}>
-              <Text style={styles.aiText}>{recipeData.aiReason}</Text>
-            </View>
+        {loading ? (
+          <ActivityIndicator size="large" style={{ marginTop: 40 }} />
+        ) : !selectedRecipe ? (
+          <View style={styles.emptyBox}>
+            <Text style={styles.emptyText}>추천 결과가 없습니다.</Text>
           </View>
-
-          {/* 레시피 상세 설명 */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Recipe Step</Text>
-            <View style={styles.recipeDetailBox}>
-              <Text style={styles.recipeDetailText}>{recipeData.details}</Text>
-            </View>
-          </View>
-
-          {/* 재료 리스트 */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Ingredients</Text>
-            {recipeData.ingredients.map((item) => (
-              <View key={item.id} style={styles.ingredientRow}>
-                <View style={[styles.checkBox, item.checked && styles.checkedBox]}>
-                  {item.checked && <Text style={styles.checkMark}>✓</Text>}
+        ) : (
+          <>
+            <View style={styles.recommendCard}>
+              <View style={styles.cardHeader}>
+                <View style={styles.rankBadge}>
+                  <Text style={styles.rankText}>{selectedIndex + 1}위</Text>
                 </View>
-                <Text style={styles.ingredientName}>{item.name}</Text>
+                <Text style={styles.matchText}>
+                  매칭률 <Text style={styles.matchPercent}>{matchRateText}</Text>
+                </Text>
               </View>
-            ))}
-          </View>
 
-          {/* 요리 완료 버튼 */}
-          <TouchableOpacity 
-            style={styles.completeButton}
-            onPress={() => alert("요리가 완료되었습니다! 냉장고 재료가 업데이트됩니다.")}
-          >
-            <Text style={styles.completeButtonText}>요리 완료!</Text>
-          </TouchableOpacity>
-        </View>
+              <View style={styles.cardMain}>
+                <Text style={styles.foodTitle}>{selectedRecipe.recipe_name || '-'}</Text>
+
+                <View style={styles.tagRow}>
+                  {tags.map((tag, i) => (
+                    <Text key={i} style={styles.tagText}>
+                      {tag}{' '}
+                    </Text>
+                  ))}
+                </View>
+
+                <Text style={styles.infoText}>
+                  ⏱ {selectedRecipe.cooking_time ?? '-'} mins  |  난이도 :{' '}
+                  {selectedRecipe.difficulty ?? '-'}
+                </Text>
+                <Text style={styles.infoSubText}>
+                  남은 유통기한(테스트): {selectedRecipe.days_left ?? '-'}일
+                </Text>
+              </View>
+            </View>
+
+            {recipes.length > 1 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>다른 추천</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  {recipes.map((item, index) => (
+                    <TouchableOpacity
+                      key={`${item.recipe_id ?? index}`}
+                      style={[
+                        styles.miniCard,
+                        index === selectedIndex && styles.miniCardSelected,
+                      ]}
+                      onPress={() => setSelectedIndex(index)}
+                    >
+                      <Text
+                        style={[
+                          styles.miniCardTitle,
+                          index === selectedIndex && styles.miniCardTitleSelected,
+                        ]}
+                      >
+                        {index + 1}. {item.recipe_name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.miniCardText,
+                          index === selectedIndex && styles.miniCardTitleSelected,
+                        ]}
+                      >
+                        매칭률 {Math.round((item.score || 0) * 100)}%
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            <View style={styles.bottomSheet}>
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>AI&apos;s Pick Reason</Text>
+                <View style={styles.aiBubble}>
+                  <Text style={styles.aiText}>{aiReason}</Text>
+                </View>
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Recipe Step</Text>
+                <View style={styles.recipeDetailBox}>
+                  <Text style={styles.recipeDetailText}>{recipeSteps}</Text>
+                </View>
+              </View>
+
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Ingredients</Text>
+                {ingredientItems.map((item) => (
+                  <View key={item.id} style={styles.ingredientRow}>
+                    <View style={[styles.checkBox, item.checked && styles.checkedBox]}>
+                      {item.checked && <Text style={styles.checkMark}>✓</Text>}
+                    </View>
+                    <Text style={styles.ingredientName}>{item.name}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <TouchableOpacity style={styles.completeButton} onPress={handleComplete}>
+                <Text style={styles.completeButtonText}>요리 완료!</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        )}
       </ScrollView>
 
-      {/* ✅ 2. 공통 푸터 적용 */}
       <Footer />
     </SafeAreaView>
   );
@@ -101,8 +300,37 @@ const RecipeScreen = () => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F1F5F9' },
-  scrollContent: { paddingBottom: 100 }, // 푸터 높이만큼 여백
-  
+  scrollContent: { paddingBottom: 100 },
+
+  reloadButton: {
+    marginHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 10,
+    backgroundColor: '#6366F1',
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  reloadButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+
+  emptyBox: {
+    marginHorizontal: 20,
+    marginTop: 30,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#475569',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
   recommendCard: {
     backgroundColor: '#1E293B',
     borderRadius: 30,
@@ -112,15 +340,26 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     elevation: 5,
   },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  rankBadge: { backgroundColor: '#6366F1', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  rankBadge: {
+    backgroundColor: '#6366F1',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
   rankText: { color: '#FFFFFF', fontWeight: 'bold', fontSize: 11 },
   matchText: { color: '#94A3B8', fontSize: 11, fontWeight: 'bold' },
   matchPercent: { color: '#818CF8', fontSize: 18 },
   foodTitle: { fontSize: 28, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 8 },
-  tagRow: { flexDirection: 'row', marginBottom: 10 },
+  tagRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10 },
   tagText: { color: '#818CF8', fontWeight: 'bold', fontSize: 14 },
   infoText: { color: '#CBD5E1', fontSize: 13, fontWeight: '600' },
+  infoSubText: { color: '#CBD5E1', fontSize: 13, marginTop: 6 },
 
   bottomSheet: {
     backgroundColor: '#FFFFFF',
@@ -131,28 +370,80 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     minHeight: height * 0.5,
   },
-  section: { marginTop: 25 },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1E293B', marginBottom: 15 },
-  
-  aiBubble: { backgroundColor: '#F8FAFC', padding: 20, borderRadius: 20, borderLeftWidth: 4, borderLeftColor: '#6366F1' },
+  section: { marginTop: 25, marginHorizontal: 20 },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    marginBottom: 15,
+  },
+
+  miniCard: {
+    backgroundColor: '#E2E8F0',
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    marginRight: 10,
+    minWidth: 130,
+  },
+  miniCardSelected: {
+    backgroundColor: '#1E293B',
+  },
+  miniCardTitle: {
+    color: '#1E293B',
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  miniCardTitleSelected: {
+    color: '#FFFFFF',
+  },
+  miniCardText: {
+    color: '#475569',
+    fontSize: 12,
+  },
+
+  aiBubble: {
+    backgroundColor: '#F8FAFC',
+    padding: 20,
+    borderRadius: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: '#6366F1',
+  },
   aiText: { color: '#475569', fontSize: 15, lineHeight: 24 },
 
-  recipeDetailBox: { backgroundColor: '#F1F5F9', padding: 20, borderRadius: 20 },
+  recipeDetailBox: {
+    backgroundColor: '#F1F5F9',
+    padding: 20,
+    borderRadius: 20,
+  },
   recipeDetailText: { color: '#334155', fontSize: 15, lineHeight: 26 },
 
-  ingredientRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
-  checkBox: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#CBD5E1', marginRight: 15, justifyContent: 'center', alignItems: 'center' },
+  ingredientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  checkBox: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#CBD5E1',
+    marginRight: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   checkedBox: { backgroundColor: '#22C55E', borderColor: '#22C55E' },
   checkMark: { color: '#FFFFFF', fontSize: 12, fontWeight: 'bold' },
   ingredientName: { fontSize: 16, color: '#334155' },
 
-  completeButton: { 
+  completeButton: {
     marginTop: 40,
-    backgroundColor: '#1E293B', 
-    paddingVertical: 18, 
-    borderRadius: 30, 
-    alignItems: 'center', 
-    elevation: 5 
+    backgroundColor: '#1E293B',
+    paddingVertical: 18,
+    borderRadius: 30,
+    alignItems: 'center',
+    elevation: 5,
   },
   completeButtonText: { color: '#FFFFFF', fontSize: 18, fontWeight: 'bold' },
 });

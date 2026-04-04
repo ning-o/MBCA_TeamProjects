@@ -60,7 +60,6 @@ async def run_ocr(file: UploadFile = File(...)) -> dict[str, Any]:
         "filename": original_filename,
         "total_price": parsed.get("total_price"),
         "quantities": parsed.get("quantities", {}),
-        "items": parsed.get("items", []),
         }
 
     except HTTPException:

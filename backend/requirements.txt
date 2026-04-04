@@ -9,3 +9,5 @@ joblib
 scikit-learn==1.6.1
 google-cloud-vision
 python-multipart
+rapidfuzz
+numpy

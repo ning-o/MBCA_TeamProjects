@@ -1,28 +1,53 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 from app.core.database import engine, Base
 
-# 1. __init__에 등록된 모델 불러오기
+# 모델 등록
 import app.models
+import app.models.common
 
-# 2. 도메인별 라우터 불러오기
+# 도메인별 라우터
 from app.api.auth import auth
-from app.api.fridge import fridge # fridge.py 파일 내에 router 객체가 있어야 함
+from app.api.fridge import fridge
+from app.api.fridge.ocr import router as fridge_ocr_router
+from app.api.fridge.expiry_test import router as expiry_test_router
 from app.api.subs import subs
+from app.api.fridge.recommend import router as fridge_recommend_router
 
-# 부모 테이블을 포함한 common 모델들을 먼저 생성 시도
-app.models.common.Base.metadata.create_all(bind=engine, tables=[
-    app.models.common.User.__table__,
-    app.models.common.TotalSaving.__table__,
-    app.models.common.CommonCode.__table__
-])
+# 부모/공통 테이블 먼저 생성
+app.models.common.Base.metadata.create_all(
+    bind=engine,
+    tables=[
+        app.models.common.User.__table__,
+        app.models.common.TotalSaving.__table__,
+        app.models.common.CommonCode.__table__,
+    ]
+)
 
-# 서버 시작 시 DB 테이블 생성
-# Base가 위에서 import된 모든 모델을 훑으며 MySQL에 테이블을 생성.
+# 전체 등록된 모델 기준 테이블 생성
 Base.metadata.create_all(bind=engine)
 
+# FastAPI 앱은 한 번만 생성
 app = FastAPI(title="Tikkle Project API")
 
-# [루트 경로] 서버 정상 작동 확인용
+# 프론트 연결용 CORS
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 루트 경로
 @app.get("/", tags=["Root"])
 def read_root():
     return {
@@ -30,23 +55,11 @@ def read_root():
         "message": "TIKKLE API Server is running"
     }
 
-# [도메인 연결] prefix와 tags를 설정하여 Swagger 문서에서 그룹화
-# 이제 도메인 관련 API는 /api/도메인명 으로 시작함.
-app.include_router(fridge.router, prefix="/api/fridge", tags=["Fridge"])
-app.include_router(subs.router, prefix="/api/subs", tags=["Subs"])
-app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
-
-
-#===============================================================================================
-# OCR 테스트용
-from app.api.fridge import fridge
-from app.api.fridge.ocr import router as fridge_ocr_router
-from app.api.subs import subs
-from app.api.auth import auth
-
-app = FastAPI(title="Tikkle Project API")
-
+# 라우터 등록
 app.include_router(fridge.router, prefix="/api/fridge", tags=["Fridge"])
 app.include_router(fridge_ocr_router, prefix="/api/fridge", tags=["Fridge OCR"])
+app.include_router(expiry_test_router, prefix="/api/fridge", tags=["Expiry Test"])
 app.include_router(subs.router, prefix="/api/subs", tags=["Subs"])
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
+app.include_router(fridge_recommend_router, prefix="/api/fridge", tags=["Fridge Recommend"])
+
