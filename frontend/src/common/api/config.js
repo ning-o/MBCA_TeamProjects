@@ -19,7 +19,8 @@ export const API_ENDPOINTS = {
   },
 //  [냉장고 관리 도메인]
   FRIDGE: { // [카테고리 이름]
-    // ITEMS: '/api/fridge/items', // [세부 주소], 엔드포인트 추가 예시   
+    OCR: '/api/fridge/ocr',
+    SAVE_ITEMS: '/api/fridge/save-items', 
   },
 //  [구독 관리 도메인]
   SUBS: { // [카테고리 이름]

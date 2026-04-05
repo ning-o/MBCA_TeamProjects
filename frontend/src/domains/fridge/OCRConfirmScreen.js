@@ -18,15 +18,21 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../common/components/Header';
 
+// [추가]: 중앙 집중식 API 관리를 위해 설계해둔 apiClient를 임포트.
+// [이유]: 파일마다 IP를 하드코딩하지 않고 환경변수(.env) 기반의 baseUrl을 공통으로 사용하기 위함. 
+import apiClient from '../../common/api/api_client';
+
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// 사장님 PC IP로 바꾸면 됩니다.
-const API_BASE_URL = 'http://192.168.35.167:8000';
+// [수정]: 기존에 하드코딩되어 있던 API_BASE_URL 변수 선언을 삭제.
+// [이유]: 통신 기본 주소는 apiClient 내부에서 config.js(또는 .env)의 값을 자동으로 참조하도록 설계되어 있기 때문.
 
 const OCRConfirmScreen = ({ route }) => {
   const navigation = useNavigation();
+
+  const invenId = route.params?.invenId || 1;
 
   const photoUri = route.params?.photoUri;
   const isManual = route.params?.isManual || false;
@@ -65,49 +71,51 @@ const OCRConfirmScreen = ({ route }) => {
   };
 
   const normalizeParsedItems = (responseData) => {
-  const parsed =
-    responseData?.parsed_items ||
-    responseData?.items ||
-    responseData?.results ||
-    null;
+    const parsed =
+      responseData?.parsed_items ||
+      responseData?.items ||
+      responseData?.results ||
+      null;
 
-  if (Array.isArray(parsed)) {
-    return parsed.map((item, index) => ({
-      id: item.id ?? index,
-      rawName: String(
-        item.raw_text ??
-        item.rawName ??
-        item.original_name ??
-        item.name ??
-        item.canonical_food ??
-        ''
-      ),
-      matchedName: String(
-        item.canonical_food ??
-        item.matchedName ??
-        item.matched_name ??
-        item.item_name ??
-        item.name ??
-        ''
-      ),
-      quantity: String(item.quantity ?? item.qty ?? 1),
-      price: String(item.price ?? item.amount ?? ''),
-    }));
-  }
+    if (Array.isArray(parsed)) {
+      return parsed.map((item, index) => ({
+        // 인덱스가 0부터 시작하므로 DB(Pantry)의 1번부터 매칭되도록 + 1 추가
+        id: (item.id ?? index) + 1, 
+        rawName: String(
+          item.raw_text ??
+          item.rawName ??
+          item.original_name ??
+          item.name ??
+          item.canonical_food ??
+          ''
+        ).trim(),
+        matchedName: String(
+          item.canonical_food ??
+          item.matchedName ??
+          item.matched_name ??
+          item.item_name ??
+          item.name ??
+          ''
+        ),
+        quantity: String(item.quantity ?? item.qty ?? 1),
+        price: String(item.price ?? item.amount ?? ''),
+      }));
+    }
 
-  // ★ 현재 사장님 백엔드 구조 대응
-  if (responseData?.quantities && typeof responseData.quantities === 'object') {
-    return Object.entries(responseData.quantities).map(([name, qty], index) => ({
-      id: index,
-      rawName: name,
-      matchedName: name,
-      quantity: String(qty ?? 1),
-      price: '',
-    }));
-  }
+    // 현재 사장님 백엔드 구조 대응 (객체 형태일 때)
+    if (responseData?.quantities && typeof responseData.quantities === 'object') {
+      return Object.entries(responseData.quantities).map(([name, qty], index) => ({
+        // [수정]: 여기서도 1번부터 시작하기 위해 index + 1 적용
+        id: index + 1, 
+        rawName: name,
+        matchedName: name,
+        quantity: String(qty ?? 1),
+        price: '',
+      }));
+    }
 
-  return [];
-};
+    return [];
+  };
 
   const runOCR = async () => {
     try {
@@ -128,34 +136,19 @@ const OCRConfirmScreen = ({ route }) => {
       // 백엔드 엔드포인트에 맞춰 둘 중 하나 사용
       // 1) 원문 OCR만 확인용: /api/fridge/ocr/test
       // 2) 품목 파싱까지 포함: /api/fridge/ocr/analyze
-      const url = `${API_BASE_URL}/api/fridge/ocr`;
+      
+      // [수정]: 기존 fetch API 통신 로직을 제거하고, apiClient.post 방식으로 교체.
+      // [이유]: fetch 사용 시 필요했던 수동 에러 처리(response.ok)와 JSON 파싱 과정을 apiClient 인터셉터가 자동으로 처리해주어 중복 코드를 방지.
+      console.log('[OCR] 요청 URL:', apiClient.urls.FRIDGE.OCR);
 
-      console.log('[OCR] 요청 URL:', url);
-
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData,
+      const data = await apiClient.post(apiClient.urls.FRIDGE.OCR, formData, {
         headers: {
           Accept: 'application/json',
-          // Content-Type은 FormData일 때 직접 넣지 않는 게 안전
+          'Content-Type': 'multipart/form-data',
         },
       });
 
-      console.log('[OCR] response status:', response.status);
-
-      const text = await response.text();
-      console.log('[OCR] raw response:', text);
-
-      let data = {};
-      try {
-        data = JSON.parse(text);
-      } catch (e) {
-        throw new Error(`서버 응답이 JSON 형식이 아닙니다: ${text}`);
-      }
-
-      if (!response.ok) {
-        throw new Error(data?.detail || `OCR 요청 실패 (HTTP ${response.status})`);
-      }
+      console.log('[OCR] response data:', data);
 
       const normalizedItems = normalizeParsedItems(data);
 
@@ -213,32 +206,48 @@ const OCRConfirmScreen = ({ route }) => {
 
   const handleSave = async () => {
     try {
-      const payload = {
-        items: items.map((item) => ({
-          raw_name: item.rawName,
-          matched_name: item.matchedName,
-          quantity: item.quantity,
-          price: item.price,
-        })),
-      };
+      if (!items || items.length === 0) {
+        Alert.alert('알림', '저장할 항목이 없습니다.');
+        return;
+      }
 
-      console.log('[SAVE] payload:', JSON.stringify(payload));
+      // [실전 구동용 페이로드 구성]
+      // 1. inven_id: 실제 접속 중인 냉장고 ID 사용
+      // 2. ingredient_id: OCR 결과(normalizeParsedItems)에서 매칭된 실제 마스터 ID
+      // 3. storage_type: 스키마 규격에 맞게 문자열 "1"(냉장)로 전송
+      // 4. quantity: 숫자형(Int)으로 변환
+      // 5. phurchase_date: 현재 날짜 전송
+      
+      const payload = items.map((item) => ({
+        inven_id: invenId, 
+        ingredient_id: item.id, // OCR 분석 단계에서 Pantry DB와 매칭된 실제 ID
+        storage_type: String(item.storageType || "1"),
+        quantity: parseInt(item.quantity) || 1, 
+        phurchase_date: new Date().toISOString().split('T')[0], 
+      }));
 
-      // 저장 API 붙일 때 사용
-      // const response = await fetch(`${API_BASE_URL}/api/fridge/save-items`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(payload),
-      // });
+      console.log('[SAVE] 실전 데이터 전송 시작:', JSON.stringify(payload));
 
-      Alert.alert(
-        '저장 완료',
-        `${items.length}개의 항목이 냉장고에 등록되었습니다.`,
-        [{ text: '확인', onPress: () => navigation.navigate('FridgeMain') }]
-      );
+      // [실제 API 호출 활성화]
+      const responseData = await apiClient.post(apiClient.urls.FRIDGE.SAVE_ITEMS, payload);
+      
+      console.log('[SAVE] 서버 응답 결과:', responseData);
+
+      if (responseData.status === "success") {
+        Alert.alert(
+          '저장 완료',
+          `${responseData.saved_count}개의 항목이 냉장고에 등록되었습니다.`,
+          [{ text: '확인', onPress: () => navigation.navigate('FridgeMain') }]
+        );
+      } else {
+        // 일부 실패 시 에러 메시지 표시
+        const errorMsg = responseData.errors?.map(e => e.error).join('\n');
+        Alert.alert('부분 저장 실패', `일부 항목 저장 중 오류가 발생했습니다.\n${errorMsg}`);
+      }
+
     } catch (error) {
-      console.error('[SAVE] 오류:', error);
-      Alert.alert('저장 오류', '냉장고 저장 중 문제가 발생했습니다.');
+      console.error('[SAVE] 실전 구동 중 치명적 오류:', error);
+      Alert.alert('통신 오류', '서버와 연결할 수 없거나 데이터 규격이 맞지 않습니다.');
     }
   };
 

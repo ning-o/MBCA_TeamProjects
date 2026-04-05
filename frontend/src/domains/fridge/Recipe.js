@@ -13,87 +13,56 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
 
+// [수정]: 하드코딩된 SERVER_URL 대신 공통 apiClient를 임포트합니다.
+import apiClient from '../../common/api/api_client';
+
 const { height } = Dimensions.get('window');
-
-// Android Emulator: http://10.0.2.2:8000
-// iOS Simulator: http://localhost:8000
-// 실제 기기: http://내PC로컬IP:8000
-const SERVER_URL = 'http://192.168.35.167:8000';
-
-body: JSON.stringify({
-  input_stock: {
-    계란: 2,
-    양파: 5,
-    대파: 3,
-    간장: 30,
-    참기름: 60,
-  },
-  top_k: 5,
-})
 
 const RecipeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [recipes, setRecipes] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
+  // [수정]: fetch 대신 apiClient.post를 사용하여 네트워크 요청을 수행합니다.
   const fetchRecommendations = async () => {
-  let timeoutId;
+    try {
+      console.log("[1] 추천 버튼 눌림");
+      setLoading(true);
 
-  try {
-    console.log("[1] 추천 버튼 눌림");
-    setLoading(true);
+      // 테스트용 페이로드 데이터
+      const payload = {
+        input_stock: {
+          계란: 2,
+          양파: 5,
+          대파: 3,
+          간장: 30,
+          참기름: 60,
+        },
+        top_k: 5,
+      };
 
-    const controller = new AbortController();
-    timeoutId = setTimeout(() => {
-      console.log("[2] 8초 타임아웃 - 요청 강제 중단");
-      controller.abort();
-    }, 8000);
+      console.log("[2] 요청 데이터:", JSON.stringify(payload));
 
-    const url = `${SERVER_URL}/api/fridge/recommend/test`;
-    const payload = {
-    input_stock: {
-      계란: 2,
-      양파: 5,
-      대파: 3,
-      간장: 30,
-      참기름: 60,
-    },
-    top_k: 5,
-    };
+      /**
+       * [변경 포인트]
+       * 1. 하드코딩된 IP 주소를 완전히 제거했습니다.
+       * 2. apiClient가 config.js의 설정을 따라 자동으로 현재 접속된 IP의 8000번 포트를 바라봅니다.
+       * 3. apiClient 내부의 타임아웃(10초) 설정을 따르므로 별도의 AbortController 로직이 필요 없습니다.
+       */
+      const data = await apiClient.post('/api/fridge/recommend/test', payload);
 
-    console.log("[3] 요청 URL:", url);
-    console.log("[4] 요청 body:", JSON.stringify(payload));
+      console.log("[3] 응답 데이터 수신 완료:", data);
 
-    
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal,
-    });
-
-    console.log("[5] 응답 도착");
-    console.log("[6] status:", response.status);
-
-    const rawText = await response.text();
-    console.log("[7] rawText:", rawText);
-
-    const data = rawText ? JSON.parse(rawText) : {};
-    console.log("[8] parsed data:", data);
-
-    setRecipes(data.recommendations || []);
-    setSelectedIndex(0);
-  } catch (error) {
-    console.log("[ERROR] fetchRecommendations:", error);
-    Alert.alert("오류", String(error));
-  } finally {
-    clearTimeout(timeoutId);
-    console.log("[9] finally 진입 - 로딩 해제");
-    setLoading(false);
-  }
-};
+      setRecipes(data.recommendations || []);
+      setSelectedIndex(0);
+    } catch (error) {
+      console.log("[ERROR] fetchRecommendations:", error);
+      // apiClient 인터셉터에서 이미 Alert을 띄워주지만, 상세 에러 확인을 위해 로그를 남깁니다.
+    } finally {
+      console.log("[4] finally 진입 - 로딩 해제");
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchRecommendations();
@@ -260,7 +229,7 @@ const RecipeScreen = () => {
 
             <View style={styles.bottomSheet}>
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>AI&apos;s Pick Reason</Text>
+                <Text style={styles.sectionTitle}>AI's Pick Reason</Text>
                 <View style={styles.aiBubble}>
                   <Text style={styles.aiText}>{aiReason}</Text>
                 </View>
