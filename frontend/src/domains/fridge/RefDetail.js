@@ -21,7 +21,7 @@ const RefDetail = () => {
   ];
 
   const myFoodList = [
-    { id: '1', name: '양파', count: '12', dday: 3, storage: '냉장', category: '신선식품' },
+    { id: '1', name: '소고기', count: '12', dday: 3, storage: '냉장', category: '신선식품' },
     { id: '2', name: '마늘', count: '12', dday: 5, storage: '냉장', category: '신선식품' },
     { id: '3', name: '봄동', count: '12', dday: 7, storage: '냉장', category: '신선식품' },
     { id: '4', name: '무', count: '12', dday: 12, storage: '냉장', category: '신선식품' },

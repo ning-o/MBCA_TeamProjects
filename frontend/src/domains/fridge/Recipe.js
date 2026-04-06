@@ -26,7 +26,6 @@ const RecipeScreen = () => {
   // [수정]: fetch 대신 apiClient.post를 사용하여 네트워크 요청을 수행합니다.
   const fetchRecommendations = async () => {
     try {
-      console.log("[1] 추천 버튼 눌림");
       setLoading(true);
 
       // 테스트용 페이로드 데이터
@@ -40,8 +39,6 @@ const RecipeScreen = () => {
         },
         top_k: 5,
       };
-
-      console.log("[2] 요청 데이터:", JSON.stringify(payload));
 
       /**
        * [변경 포인트]
@@ -59,7 +56,6 @@ const RecipeScreen = () => {
       console.log("[ERROR] fetchRecommendations:", error);
       // apiClient 인터셉터에서 이미 Alert을 띄워주지만, 상세 에러 확인을 위해 로그를 남깁니다.
     } finally {
-      console.log("[4] finally 진입 - 로딩 해제");
       setLoading(false);
     }
   };
