@@ -11,6 +11,8 @@ from app.api.auth import auth
 from app.api.fridge import fridge
 from app.api.fridge.ocr import router as fridge_ocr_router
 from app.api.fridge.expiry_test import router as expiry_test_router
+from app.api.subs import subs
+from app.api.subs.recommend import router as subs_recommend
 from app.api.fridge.recommend import router as fridge_recommend_router
 from app.api.fridge.LLM_recommended import router as llm_recommend_router
 from app.api.subs import subs
@@ -62,5 +64,8 @@ app.include_router(subs.router, prefix="/api/subs", tags=["Subs"])
 app.include_router(fridge.router, prefix="/api/fridge", tags=["Fridge"])
 app.include_router(fridge_ocr_router, prefix="/api/fridge", tags=["Fridge OCR"])
 app.include_router(expiry_test_router, prefix="/api/fridge", tags=["Expiry Test"])
+app.include_router(subs.router, prefix="/api/subs", tags=["Subs"])
+app.include_router(subs_recommend, prefix="/api/subs", tags=["Subs Recommend"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(fridge_recommend_router, prefix="/api/fridge", tags=["Fridge Recommend"])
 app.include_router(llm_recommend_router, prefix="/api/fridge", tags=["Fridge LLM Recommend"])
