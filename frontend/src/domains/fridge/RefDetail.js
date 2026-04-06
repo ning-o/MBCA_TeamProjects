@@ -1,12 +1,18 @@
-import React, { useState } from 'react';
-import { View, FlatList, StyleSheet, Text, TouchableOpacity, TextInput, SafeAreaView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, FlatList, StyleSheet, Text, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context'; 
 import { Search, CalendarDays, Box } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
+
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
+import apiClient from '../../common/api/api_client';
 
 const RefDetail = () => {
   const navigation = useNavigation();
+  
+  const [loading, setLoading] = useState(true);
+  const [myFoodList, setMyFoodList] = useState([]);
   const [activeCategory, setActiveCategory] = useState('전체');
   const [activeStorage, setActiveStorage] = useState('냉장');
   const [searchText, setSearchText] = useState('');
@@ -20,18 +26,22 @@ const RefDetail = () => {
     { id: 'etc', name: '기타' },
   ];
 
-  const myFoodList = [
-    { id: '1', name: '소고기', count: '12', dday: 3, storage: '냉장', category: '신선식품' },
-    { id: '2', name: '마늘', count: '12', dday: 5, storage: '냉장', category: '신선식품' },
-    { id: '3', name: '봄동', count: '12', dday: 7, storage: '냉장', category: '신선식품' },
-    { id: '4', name: '무', count: '12', dday: 12, storage: '냉장', category: '신선식품' },
-    { id: '5', name: '목 전지살', count: '12', dday: 14, storage: '냉동', category: '육류' },
-    { id: '6', name: '양 갈비', count: '12', dday: 23, storage: '냉동', category: '육류' },
-    { id: '7', name: '닭고기', count: '12', dday: 31, storage: '냉동', category: '육류' },
-    { id: '8', name: '햄', count: '12', dday: 99, storage: '냉장', category: '기타' },
-  ];
+  const fetchInventory = async () => {
+    try {
+      setLoading(true);
+      const data = await apiClient.get('/api/fridge/inventory/1');
+      setMyFoodList(data);
+    } catch (error) {
+      console.error('[RefDetail] 호출 에러:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // 💡 필터링 로직: 냉장/냉동 탭 + 카테고리 + 검색어 일치 여부 확인
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
   const filteredList = myFoodList.filter(item => {
     const isStorageMatch = item.storage === activeStorage;
     const isCategoryMatch = activeCategory === '전체' || item.category === activeCategory;
@@ -58,68 +68,72 @@ const RefDetail = () => {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* ✅ 공통 헤더 사용 */}
+    // ✅ edges={['right', 'left']} 속성을 넣어 스타일 유지
+    <SafeAreaView style={styles.container} edges={['right', 'left']}>
       <Header />
+      <View style={{ marginTop: 60 }}> 
+        {/* 헤더 공간 확보를 위해 View로 감싸거나 마진 추가 */}
+        <View style={styles.searchBar}>
+          <Search size={20} color="#94A3B8" style={styles.searchIcon} />
+          <TextInput 
+            placeholder="식재료 검색" 
+            style={styles.searchInput} 
+            value={searchText}
+            onChangeText={setSearchText}
+          />
+        </View>
 
-      {/* 검색바 */}
-      <View style={styles.searchBar}>
-        <Search size={20} color="#94A3B8" style={styles.searchIcon} />
-        <TextInput 
-          placeholder="식재료 검색" 
-          style={styles.searchInput} 
-          value={searchText}
-          onChangeText={setSearchText}
-        />
+        <View style={{ height: 60 }}>
+          <FlatList
+            horizontal
+            data={categories}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.categoryScroll}
+            showsHorizontalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <TouchableOpacity 
+                style={[styles.categoryBtn, activeCategory === item.name && styles.categoryBtnActive]}
+                onPress={() => setActiveCategory(item.name)}
+              >
+                <Text style={[styles.categoryBtnText, activeCategory === item.name && styles.categoryBtnTextActive]}>
+                  {item.name}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+
+        <View style={styles.storageToggle}>
+          <TouchableOpacity 
+            style={[styles.toggleBtn, activeStorage === '냉장' && styles.toggleBtnActive]}
+            onPress={() => setActiveStorage('냉장')}
+          >
+            <Text style={[styles.toggleText, activeStorage === '냉장' && styles.toggleTextActive]}>냉장</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.toggleBtn, activeStorage === '냉동' && styles.toggleBtnActive]}
+            onPress={() => setActiveStorage('냉동')}
+          >
+            <Text style={[styles.toggleText, activeStorage === '냉동' && styles.toggleTextActive]}>냉동</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* 카테고리 필터 */}
-      <View style={{ height: 60 }}>
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#3B82F6" />
+        </View>
+      ) : (
         <FlatList
-          horizontal
-          data={categories}
+          data={filteredList}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.categoryScroll}
-          showsHorizontalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <TouchableOpacity 
-              style={[styles.categoryBtn, activeCategory === item.name && styles.categoryBtnActive]}
-              onPress={() => setActiveCategory(item.name)}
-            >
-              <Text style={[styles.categoryBtnText, activeCategory === item.name && styles.categoryBtnTextActive]}>
-                {item.name}
-              </Text>
-            </TouchableOpacity>
-          )}
+          renderItem={renderItem}
+          contentContainerStyle={styles.listPadding}
+          ListEmptyComponent={<Text style={styles.emptyText}>냉장고가 비어있네요!</Text>}
+          onRefresh={fetchInventory}
+          refreshing={loading}
         />
-      </View>
-
-      {/* 냉장/냉동 토글 */}
-      <View style={styles.storageToggle}>
-        <TouchableOpacity 
-          style={[styles.toggleBtn, activeStorage === '냉장' && styles.toggleBtnActive]}
-          onPress={() => setActiveStorage('냉장')}
-        >
-          <Text style={[styles.toggleText, activeStorage === '냉장' && styles.toggleTextActive]}>냉장</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.toggleBtn, activeStorage === '냉동' && styles.toggleBtnActive]}
-          onPress={() => setActiveStorage('냉동')}
-        >
-          <Text style={[styles.toggleText, activeStorage === '냉동' && styles.toggleTextActive]}>냉동</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* 재료 리스트 */}
-      <FlatList
-        data={filteredList}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        contentContainerStyle={styles.listPadding}
-        ListEmptyComponent={<Text style={styles.emptyText}>냉장고가 비어있네요!</Text>}
-      />
-
-      {/* ✅ 공통 푸터 사용 */}
+      )}
       <Footer />
     </SafeAreaView>
   );

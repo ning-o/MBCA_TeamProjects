@@ -1,12 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react'; // useRef, useEffect 추가
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput, Alert, Modal, TouchableWithoutFeedback, Keyboard, Animated } from 'react-native'; // Animated 추가
+import React, { useState, useRef, useEffect, useCallback } from 'react'; // useCallback 추가
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput, Alert, Modal, TouchableWithoutFeedback, Keyboard, Animated } from 'react-native'; 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Soup, Camera, ChevronRight, Settings, Users, LogOut, UtensilsCrossed } from 'lucide-react-native'; 
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native'; // useFocusEffect 추가
 
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
 import OCRConfirmScreen from './OCRConfirmScreen';
+import apiClient from '../../common/api/api_client'; // apiClient 임포트 추가
 
 const { width, height } = Dimensions.get('window');
 
@@ -33,20 +34,48 @@ const FridgeMainScreen = () => {
   const spentAmount = 17;     
   const budgetStartDay = 1;
 
-  // 1. 한달 식비 입력 상태 관리 (사용자 입력 시 실시간 게이지 반영)
   const [monthlyBudget, setMonthlyBudget] = useState('30');
   const [lastValidBudget, setLastValidBudget] = useState('30'); 
   const parsedBudget = parseInt(monthlyBudget) || 1; 
 
-  // 냉장고 관리 모달 및 상태 관리
   const [isManageModalVisible, setIsManageModalVisible] = useState(false);
   const [inputFridgeName, setInputFridgeName] = useState("띠끌이네"); 
   const [confirmedFridgeName, setConfirmedFridgeName] = useState("티끌이네"); 
 
-  // LLM 추천 메뉴 임시 데이터 (추후 API 연동)
   const recommendedMenu = "제철 달래 된장찌개";
 
-  // 입력창 포커스가 해제될 때(끌 때) 실행되는 함수
+  // 💡 [유통기한 임박 재료 상태 관리 추가]
+  const [imminentIngredient, setImminentIngredient] = useState({ name: "재료 없음", dDay: "-" });
+
+  // 💡 [실시간 연동 로직 추가]: 화면에 포커스 될 때마다 가장 임박한 재료를 조회합니다.
+  useFocusEffect(
+    useCallback(() => {
+      const fetchImminentIngredient = async () => {
+        try {
+          const data = await apiClient.get('/api/fridge/inventory/1');
+          
+          if (data && data.length > 0) {
+            // dday 기준으로 가장 값이 작은(임박한) 재료 찾기
+            const closestItem = data.reduce((prev, curr) => (prev.dday < curr.dday ? prev : curr));
+            
+            let dDayText = '';
+            if (closestItem.dday === 0) dDayText = 'D-Day';
+            else if (closestItem.dday < 0) dDayText = `D+${Math.abs(closestItem.dday)}`; // 기한 지남
+            else dDayText = `D-${closestItem.dday}`;
+
+            setImminentIngredient({ name: closestItem.name, dDay: dDayText });
+          } else {
+            setImminentIngredient({ name: "재료 없음", dDay: "-" });
+          }
+        } catch (error) {
+          console.error('[FridgeMain] 유통기한 임박 재료 조회 실패:', error);
+        }
+      };
+
+      fetchImminentIngredient();
+    }, [])
+  );
+
   const handleBudgetBlur = () => {
     if (monthlyBudget.trim() === '' || parseInt(monthlyBudget) <= 0) {
       setMonthlyBudget(lastValidBudget);
@@ -55,7 +84,6 @@ const FridgeMainScreen = () => {
     }
   };
 
-  // 설정 저장 함수
   const handleSaveSettings = () => {
     setConfirmedFridgeName(inputFridgeName);
     setIsManageModalVisible(false);
@@ -63,8 +91,8 @@ const FridgeMainScreen = () => {
   };
 
   const handleOpenManageModal = () => {
-  if (showHint) setShowHint(false); // 1. 힌트가 떠 있다면 끄기
-  setIsManageModalVisible(true);    // 2. 동시에 냉장고 관리 모달 오픈
+    if (showHint) setShowHint(false); 
+    setIsManageModalVisible(true);    
   };
 
   const today = new Date();
@@ -93,7 +121,6 @@ const FridgeMainScreen = () => {
     navigation.navigate('OCRConfirm', { isManual: true }); 
   };
 
-  const imminentIngredient = { name: "계란", dDay: "D-2" };
   const topRecommendedRecipe = "우유 리조또";
 
   return (
@@ -182,6 +209,7 @@ const FridgeMainScreen = () => {
           </View>
 
           <View style={styles.row}>
+            {/* 💡 연동된 데이터(imminentIngredient)가 여기에 적용됩니다 */}
             <MenuCard 
               title="냉장고 속 재료" 
               value={imminentIngredient.name} 
@@ -204,7 +232,6 @@ const FridgeMainScreen = () => {
         </View>
       </ScrollView>
 
-      {/* 📍 [추가] 처음 접속 시에만 보이는 힌트 레이어 */}
       {showHint && (
         <TouchableWithoutFeedback onPress={() => setShowHint(false)}>
           <View style={StyleSheet.absoluteFillObject}>
@@ -519,7 +546,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
   },
-  // [힌트 스타일]
   hintContainer: {
     position: 'absolute',
     right: 10,
