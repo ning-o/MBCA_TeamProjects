@@ -13,6 +13,7 @@ from app.api.fridge import fridge
 from app.api.fridge.ocr import router as fridge_ocr_router
 from app.api.fridge.expiry_test import router as expiry_test_router
 from app.api.subs import subs
+from app.api.subs.recommend import router as subs_recommend
 from app.api.fridge.recommend import router as fridge_recommend_router
 
 # 부모/공통 테이블 먼저 생성
@@ -60,6 +61,7 @@ app.include_router(fridge.router, prefix="/api/fridge", tags=["Fridge"])
 app.include_router(fridge_ocr_router, prefix="/api/fridge", tags=["Fridge OCR"])
 app.include_router(expiry_test_router, prefix="/api/fridge", tags=["Expiry Test"])
 app.include_router(subs.router, prefix="/api/subs", tags=["Subs"])
+app.include_router(subs_recommend, prefix="/api/subs", tags=["Subs Recommend"])
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(fridge_recommend_router, prefix="/api/fridge", tags=["Fridge Recommend"])
 
