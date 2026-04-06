@@ -220,7 +220,8 @@ const OCRConfirmScreen = ({ route }) => {
       
       const payload = items.map((item) => ({
         inven_id: invenId, 
-        ingredient_id: item.id, // OCR 분석 단계에서 Pantry DB와 매칭된 실제 ID
+        ingredient_id: item.id,
+        ingredient_name: item.matchedName, // 실제 이름 전송
         storage_type: String(item.storageType || "1"),
         quantity: parseInt(item.quantity) || 1, 
         phurchase_date: new Date().toISOString().split('T')[0], 

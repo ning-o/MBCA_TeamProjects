@@ -18,6 +18,7 @@ class RefrigeratorResponse(RefrigeratorBase):
 class IngredientCreate(BaseModel):
     inven_id: int                        # 소속 냉장고 ID
     ingredient_id: int                   # 식재료 마스터 ID
+    ingredient_name: str | None = None
     storage_type: str                    # 저장 방식 (1:냉장, 2:냉동, 3:실온)
     quantity: int                        # 수량
     phurchase_date: date                 # 구매일 (모델 오타 유지: phurchase)

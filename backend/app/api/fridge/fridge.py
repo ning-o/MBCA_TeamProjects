@@ -88,13 +88,13 @@ def save_multiple_ingredients(
         try:
             # 1. 마스터 테이블(Pantry)에서 실제 식재료 이름 조회
             pantry_item = db.query(fridge_models.Pantry).filter(
-                fridge_models.Pantry.ingredient_id == item.ingredient_id
+                fridge_models.Pantry.ingredient_name == item.ingredient_name
             ).first()
 
             if not pantry_item:
                 errors.append({
-                    "ingredient_id": item.ingredient_id, 
-                    "error": "Pantry에서 식재료 마스터 정보를 찾을 수 없습니다."
+                    "ingredient_id": item.ingredient_name, 
+                    "error": f"'{item.ingredient_name}'을(를) Pantry에서 찾을 수 없습니다."
                 })
                 continue
 
@@ -121,7 +121,7 @@ def save_multiple_ingredients(
             # 5. DB Insert 객체 생성 (RefIngredients 테이블)
             new_ref_ingredient = fridge_models.RefIngredients(
                 inven_id=item.inven_id,
-                ingredient_id=item.ingredient_id,
+                ingredient_id=pantry_item.ingredient_id,
                 storage_type=str(item.storage_type),
                 d_days=calculated_d_days,  # AI가 계산한 최종 날짜 삽입
                 quantity=item.quantity,
