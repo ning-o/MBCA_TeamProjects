@@ -7,12 +7,13 @@ import {FeatureCard} from '../common/components/FeatureCard';
 
 
 function MainHome({ navigation }) {
-  const handleSubscription = () => navigation.navigate('SubsRouter');
+  const handleSubscription = () => navigation.navigate('Subs');
   const handleRefrigerator = () => navigation.navigate('Fridge');
   const handleStatistics = () => navigation.navigate('Auth');
 
   return (
-    <View style={{ flex: 1, paddingTop:100 }}>
+    // 버튼 전체 중앙에 놓기 위해 수정
+    <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 24 }}> 
       <View style={styles.cardList}>
         <FeatureCard
           title="구독관리"
@@ -36,7 +37,6 @@ function MainHome({ navigation }) {
           onPress={handleStatistics}
         />
       </View>
-      <Footer/>
     </View>
   );
 }

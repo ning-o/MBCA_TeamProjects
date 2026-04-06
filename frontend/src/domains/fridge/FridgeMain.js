@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput, Alert, Modal, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react'; // useRef, useEffect 추가
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput, Alert, Modal, TouchableWithoutFeedback, Keyboard, Animated } from 'react-native'; // Animated 추가
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Soup, Camera, ChevronRight, Settings, Users, LogOut, UtensilsCrossed } from 'lucide-react-native'; // UtensilsCrossed 아이콘 추가
+import { Soup, Camera, ChevronRight, Settings, Users, LogOut, UtensilsCrossed } from 'lucide-react-native'; 
 import { useNavigation } from '@react-navigation/native';
 
 import Header from '../../common/components/Header';
@@ -12,7 +12,22 @@ const { width, height } = Dimensions.get('window');
 
 const FridgeMainScreen = () => {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets(); // 헤더 위 버튼 위치 계산용
+  const insets = useSafeAreaInsets(); 
+
+  // --- [힌트 애니메이션 로직 추가] ---
+  const [showHint, setShowHint] = useState(true);
+  const translateY = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (showHint) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(translateY, { toValue: 10, duration: 600, useNativeDriver: true }),
+          Animated.timing(translateY, { toValue: 0, duration: 600, useNativeDriver: true }),
+        ])
+      ).start();
+    }
+  }, [showHint]);
 
   // --- [데이터 및 실시간 날짜 로직] ---
   const spentAmount = 17;     
@@ -20,13 +35,13 @@ const FridgeMainScreen = () => {
 
   // 1. 한달 식비 입력 상태 관리 (사용자 입력 시 실시간 게이지 반영)
   const [monthlyBudget, setMonthlyBudget] = useState('30');
-  const [lastValidBudget, setLastValidBudget] = useState('30'); // 취소 시 기존 값 복구용 백업
-  const parsedBudget = parseInt(monthlyBudget) || 1; // 0이나 빈칸일 때 에러 방지
+  const [lastValidBudget, setLastValidBudget] = useState('30'); 
+  const parsedBudget = parseInt(monthlyBudget) || 1; 
 
   // 냉장고 관리 모달 및 상태 관리
   const [isManageModalVisible, setIsManageModalVisible] = useState(false);
-  const [inputFridgeName, setInputFridgeName] = useState("팀장님네"); // 사용자 입력용 (앞에 이름만)
-  const [confirmedFridgeName, setConfirmedFridgeName] = useState("팀장님네"); // 최종 확정된 이름
+  const [inputFridgeName, setInputFridgeName] = useState("띠끌이네"); 
+  const [confirmedFridgeName, setConfirmedFridgeName] = useState("티끌이네"); 
 
   // LLM 추천 메뉴 임시 데이터 (추후 API 연동)
   const recommendedMenu = "제철 달래 된장찌개";
@@ -34,10 +49,8 @@ const FridgeMainScreen = () => {
   // 입력창 포커스가 해제될 때(끌 때) 실행되는 함수
   const handleBudgetBlur = () => {
     if (monthlyBudget.trim() === '' || parseInt(monthlyBudget) <= 0) {
-      // 안 쓰고 끄거나 0원을 입력하면 백업해둔 기존 값으로 원상복구
       setMonthlyBudget(lastValidBudget);
     } else {
-      // 정상 입력하고 끄면 백업 데이터도 업데이트
       setLastValidBudget(monthlyBudget);
     }
   };
@@ -49,66 +62,57 @@ const FridgeMainScreen = () => {
     Keyboard.dismiss();
   };
 
+  const handleOpenManageModal = () => {
+  if (showHint) setShowHint(false); // 1. 힌트가 떠 있다면 끄기
+  setIsManageModalVisible(true);    // 2. 동시에 냉장고 관리 모달 오픈
+  };
+
   const today = new Date();
   const currentDay = today.getDate();
   const currentMonth = today.getMonth();
   const currentYear = today.getFullYear();
   const totalDaysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
 
-  // 소비량 게이지 각도 (입력된 예산 기반 계산)
   const consumptionRate = Math.min((spentAmount / parsedBudget) * 100, 100); 
   const moneyRotation = -225 + (consumptionRate / 100) * 180;
 
-  // 오늘 날짜 바늘 각도
   const dayProgress = (currentDay - 1) / (totalDaysInMonth - 1);
   const dayRotation = -90 + (dayProgress * 180);
 
-  // 페이스 예측 계산
   const passedDays = currentDay >= budgetStartDay ? (currentDay - budgetStartDay + 1) : 1;
   const dailyAverage = spentAmount / passedDays;
   const projectedTotal = dailyAverage * totalDaysInMonth;
   const remainingOrOver = parsedBudget - projectedTotal;
   const isGoodPace = remainingOrOver >= 0;
 
-  // --- [하단 카드용 연동 데이터 및 함수] ---
-  
-  // 2-1. 장본 재료 추가 (카메라 실행 및 이미지 획득 로직)
   const handleCameraLaunch = async () => {
     navigation.navigate('CustomCamera');
   };
 
-  // 2-2. 장본 재료 직접 추가 (사진 없이 이동)
   const handleManualAdd = () => {
-    // isManual: true 라는 암호를 같이 보냅니다.
     navigation.navigate('OCRConfirm', { isManual: true }); 
   };
 
-  // 3. 냉장고 속 재료 (RefDetail에서 불러올 가장 유통기한 임박한 재료)
   const imminentIngredient = { name: "계란", dDay: "D-2" };
-
-  // 4. 냉장고 털기 (현재 재료 기반 추천 요리 1순위)
   const topRecommendedRecipe = "우유 리조또";
 
   return (
     <SafeAreaView style={styles.container}>
       <Header />
 
-      {/* 📍 [수정 영역] 냉장고 관리 버튼 (Header.js 의 zIndex 1000 보다 높게 설정) */}
       <TouchableOpacity 
         style={[styles.manageButton, { top: insets.top + 8 }]} 
-        onPress={() => setIsManageModalVisible(true)}
+        onPress={handleOpenManageModal}
       >
-        <Settings size={24} color="#333" />
+        <View style={styles.manageButtonContent}>
+          <Settings size={22} color="#3B82F6" strokeWidth={2.5} />
+        </View>
       </TouchableOpacity>
       
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={{ height: height * 0.08 }} />
         
-        {/* ============================================================
-            [START] 게이지바 영역
-            ============================================================ */}
         <View style={styles.topSection}>
-          {/* 📍 [수정 영역] 설정된 이름을 반영하여 출력 */}
           <Text style={styles.brandTitle}>{confirmedFridgeName} 냉장고</Text>
           
           <View style={styles.gaugeWrapper}>
@@ -153,29 +157,19 @@ const FridgeMainScreen = () => {
             </Text>
           </View>
         </View>
-        {/* ============================================================
-            [END] 게이지바 영역
-            ============================================================ */}
 
-        {/* ============================================================
-            [START] 하단 버튼 카드 영역
-            ============================================================ */}
         <View style={styles.cardGrid}>
-          
-          {/* 윗줄 (1번, 2번 카드) */}
           <View style={styles.row}>
-            {/* 1. 한달 식비 입력 카드 -> 제철음식 추천 LLM 카드로 변경 */}
             <MenuCard 
               title="장 보러 가기전에 추천" 
               value={recommendedMenu} 
               renderIcon={() => <UtensilsCrossed size={20} color="#1E293B" />} 
               sub="제철 음식이 땡기지 않나요?" 
               alignRight={true} 
-              isSubCenter={true} // 서브 텍스트 중앙 정렬
+              isSubCenter={true} 
               onPress={() => Alert.alert("LLM 연동 준비중", "현재 예산 페이스와 제철 식재료를 분석하여 장보기 최적화 메뉴 추천 기능을 준비중입니다.")} 
             />
 
-            {/* 2. 장본 재료 추가하기 (클릭 시 카메라 실행) */}
             <MenuCard 
               title="장본 재료 추가하기" 
               renderIcon={() => <Camera size={20} color="#1E293B" />} 
@@ -183,44 +177,52 @@ const FridgeMainScreen = () => {
               sub="직접 추가하기"  
               alignRight={true} 
               onPress={handleCameraLaunch} 
-              onSubPress={handleManualAdd} // 서브 버튼 클릭 시 직접 추가 함수 실행
+              onSubPress={handleManualAdd} 
             />
           </View>
 
-          {/* 아랫줄 (3번, 4번 카드) */}
           <View style={styles.row}>
-            {/* 3. 냉장고 속 재료 (유통기한 가장 임박한 재료 노출) */}
             <MenuCard 
               title="냉장고 속 재료" 
               value={imminentIngredient.name} 
-              prefixText={imminentIngredient.dDay} // 이름 왼쪽에 D-day 데이터 삽입
+              prefixText={imminentIngredient.dDay} 
               highlight 
-              alignRight={true} // 우측 정렬 적용
+              alignRight={true} 
               onPress={() => navigation.navigate('RefDetail')} 
             />
 
-            {/* 4. 냉장고 털기 (현재 재료 기반 추천 요리 1순위) */}
             <MenuCard 
               title="냉장고 털기" 
               renderIcon={() => <Soup size={20} color="#1E293B" />} 
               value={topRecommendedRecipe} 
               sub="다른 요리 추천" 
               alignRight={true}
-              // 카드 메인(우유 리조또 영역) 클릭 시 이동
               onPress={() => navigation.navigate('Recipe', { recipeName: topRecommendedRecipe })} 
-              // 하단 '다른 요리 추천' 클릭 시 이동
               onSubPress={() => navigation.navigate('RecipeList')} 
             />
           </View>
-
         </View>
-        {/* ============================================================
-            [END] 하단 버튼 카드 영역
-            ============================================================ */}
-            
       </ScrollView>
 
-      {/* 냉장고 관리 모달 */}
+      {/* 📍 [추가] 처음 접속 시에만 보이는 힌트 레이어 */}
+      {showHint && (
+        <TouchableWithoutFeedback onPress={() => setShowHint(false)}>
+          <View style={StyleSheet.absoluteFillObject}>
+            <Animated.View 
+              style={[
+                styles.hintContainer, 
+                { top: insets.top + 50, transform: [{ translateY }] }
+              ]}
+            >
+              <Text style={styles.hintArrow}>▲</Text>
+              <View style={styles.hintBubble}>
+                <Text style={styles.hintText}>냉장고 설정을 해주세요!</Text>
+              </View>
+            </Animated.View>
+          </View>
+        </TouchableWithoutFeedback>
+      )}
+
       <Modal
         animationType="fade"
         transparent={true}
@@ -233,7 +235,6 @@ const FridgeMainScreen = () => {
               <Text style={styles.modalTitle}>냉장고 관리</Text>
               
               <View style={styles.modalMenuContainer}>
-                {/* 1. 냉장고 이름 입력 받기 */}
                 <View style={styles.modalMenuItem}>
                   <Text style={styles.menuLabel}>냉장고 이름</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -248,7 +249,6 @@ const FridgeMainScreen = () => {
                   </View>
                 </View>
 
-                {/* 2. 냉장고 한달 식비 설정 */}
                 <View style={styles.modalMenuItem}>
                   <Text style={styles.menuLabel}>한달 식비 설정</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -265,7 +265,6 @@ const FridgeMainScreen = () => {
                   </View>
                 </View>
 
-                {/* 3. 동거인 초대 */}
                 <TouchableOpacity style={styles.modalMenuItem}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <Users size={18} color="#1E293B" style={{marginRight: 8}}/>
@@ -274,7 +273,6 @@ const FridgeMainScreen = () => {
                   <ChevronRight size={18} color="#94A3B8" />
                 </TouchableOpacity>
 
-                {/* 4. 냉장고 탈퇴/삭제 */}
                 <TouchableOpacity style={[styles.modalMenuItem, {borderBottomWidth: 0}]}>
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <LogOut size={18} color="#EF4444" style={{marginRight: 8}}/>
@@ -283,7 +281,6 @@ const FridgeMainScreen = () => {
                 </TouchableOpacity>
               </View>
 
-              {/* 하단 버튼 영역 */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
                 <TouchableOpacity 
                   style={[styles.modalBtn, { backgroundColor: '#F1F5F9' }]} 
@@ -314,20 +311,16 @@ const FridgeMainScreen = () => {
   );
 };
 
-// --- [공통 메뉴 카드 컴포넌트] ---
-const MenuCard = ({ title, value, unit, sub, icon, highlight, onPress, isInput, onChangeText, onBlur, alignRight, prefixText, onSubPress, renderIcon, isSubCenter }) => ( // ★ isSubCenter Props 추가
+const MenuCard = ({ title, value, unit, sub, icon, highlight, onPress, isInput, onChangeText, onBlur, alignRight, prefixText, onSubPress, renderIcon, isSubCenter }) => ( 
   <TouchableOpacity 
     style={styles.card} 
     onPress={onPress || (() => {})} 
     activeOpacity={isInput ? 1 : 0.7} 
   >
-    {/* 상단: 타이틀 */}
     <Text style={styles.cardTitle}>{title}</Text>
     
-    {/* 중단: 중앙 컨텐츠 */}
     <View style={{ flex: 1, justifyContent: 'center' }}>
       {prefixText ? (
-        /* 3번 카드 전용 레이아웃: 반반 나누어 중앙 정렬 */
         <View style={{ flexDirection: 'row', width: '100%', alignItems: 'center' }}>
           <View style={{ flex: 1, alignItems: 'center' }}>
             <Text style={styles.cardPrefixBlue}>{prefixText}</Text>
@@ -339,10 +332,7 @@ const MenuCard = ({ title, value, unit, sub, icon, highlight, onPress, isInput, 
           </View>
         </View>
       ) : (
-        /* 기본 카드 레이아웃 (1, 2, 4번 카드) */
         <View style={[styles.cardContent, alignRight && { justifyContent: 'flex-end' }]}>
-          
-          {/* 아이콘 렌더링 */}
           {renderIcon ? (
             <View style={{ marginRight: 5 }}>{renderIcon()}</View>
           ) : icon ? (
@@ -369,13 +359,12 @@ const MenuCard = ({ title, value, unit, sub, icon, highlight, onPress, isInput, 
       )}
     </View>
 
-    {/* 하단: 서브 버튼 텍스트 */}
     {sub ? (
       onSubPress ? (
         <TouchableOpacity 
           onPress={onSubPress} 
           activeOpacity={0.6}
-          style={styles.subBtnContainer} // 서브 버튼 클릭 영역 컨테이너
+          style={styles.subBtnContainer} 
         >
           <Text style={[styles.subBtnText, highlight && { color: '#3B82F6' }]}>
             {sub}
@@ -386,8 +375,8 @@ const MenuCard = ({ title, value, unit, sub, icon, highlight, onPress, isInput, 
         <Text style={[
           styles.cardSub, 
           highlight && { color: '#3B82F6' }, 
-          alignRight && !isSubCenter && { textAlign: 'right' }, // isSubCenter가 아닐 때만 우측 정렬
-          isSubCenter && { textAlign: 'center', width: '100%' }  // 1번 카드 서브 텍스트만 중앙 정렬
+          alignRight && !isSubCenter && { textAlign: 'right' }, 
+          isSubCenter && { textAlign: 'center', width: '100%' }  
         ]}>
           {sub}
         </Text>
@@ -401,10 +390,6 @@ const MenuCard = ({ title, value, unit, sub, icon, highlight, onPress, isInput, 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFF' },
   scrollContent: { paddingBottom: 100 },
-  
-  /* ============================================================
-     [START] 게이지바 영역 스타일
-     ============================================================ */
   topSection: {
     backgroundColor: '#FFFFFF', borderBottomLeftRadius: 50, borderBottomRightRadius: 50,
     paddingTop: 20, paddingBottom: 40, alignItems: 'center', elevation: 5,
@@ -443,36 +428,20 @@ const styles = StyleSheet.create({
   infoBox: { marginTop: 35, alignItems: 'center' },
   infoTitle: { fontSize: 16, color: '#3B82F6', fontWeight: '700', marginBottom: 6 },
   infoQuote: { fontSize: 14, color: '#64748B', fontWeight: '500', textAlign: 'center', paddingHorizontal: 20 },
-  /* ============================================================
-     [END] 게이지바 영역 스타일
-     ============================================================ */
-
-
-  /* ============================================================
-     [START] 하단 버튼 카드 영역 스타일
-     ============================================================ */
-  
-  /* 공통 카드 레이아웃 */
   cardGrid: { paddingHorizontal: 20, marginTop: 35 },
   row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 },
   card: {
-    backgroundColor: '#FFFFFF', width: (width - 55) / 2, borderRadius: 25, padding: 18, height: 135, // 보조 버튼 공간 확보 위해 미세 조정
+    backgroundColor: '#FFFFFF', width: (width - 55) / 2, borderRadius: 25, padding: 18, height: 135, 
     justifyContent: 'space-between', elevation: 3,
   },
   cardTitle: { fontSize: 12, fontWeight: '600', color: '#64748B' },
   cardContent: { flexDirection: 'row', alignItems: 'center' },
-  
-  /* 카드 내부 아이콘 및 값 스타일 */
   cardIcon: { fontSize: 18, marginRight: 5 },
   cardPrefixBlue: { fontSize: 15, color: '#3B82F6', fontWeight: '500' }, 
   cardValue: { fontSize: 17, fontWeight: 'bold', color: '#1E293B', maxWidth: '80%' },
   cardUnit: { fontSize: 13, color: '#1E293B', marginLeft: 2, marginTop: 3 },
   cardSub: { fontSize: 11, color: '#94A3B8', fontWeight: '500' },
-
-  /* 1번 카드(식비 입력) 전용 TextInput 스타일 */
   cardInput: { borderBottomWidth: 1, borderBottomColor: '#3B82F6', minWidth: 40, textAlign: 'center' },
-
-  /* 보조 버튼 영역 스타일 */
   subBtnContainer: {
     backgroundColor: '#F0F7FF',
     paddingVertical: 4,
@@ -484,21 +453,30 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   subBtnText: { fontSize: 10, color: '#033169', fontWeight: '800' },
-  /* ============================================================
-     [END] 하단 버튼 카드 영역 스타일
-     ============================================================ */
-
-  /* ============================================================
-     [START] 새로 추가된 관리 버튼 및 모달 스타일
-     ============================================================ */
   manageButton: {
     position: 'absolute',
     right: 16,
-    zIndex: 1001, // Header.js 의 zIndex 1000 보다 높게 설정
+    zIndex: 1001, 
     width: 40,
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  manageButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EBF2FF', 
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  manageButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#3B82F6',
+    marginLeft: 4,
   },
   modalOverlay: {
     flex: 1,
@@ -541,9 +519,24 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
   },
-  /* ============================================================
-     [END] 새로 추가된 관리 버튼 및 모달 스타일
-     ============================================================ */
+  // [힌트 스타일]
+  hintContainer: {
+    position: 'absolute',
+    right: 10,
+    alignItems: 'center',
+    zIndex: 2000,
+  },
+  hintArrow: { fontSize: 24, color: '#3B82F6', marginBottom: -5, marginLeft: 110 },
+  hintBubble: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 15,
+    alignItems: 'center',
+    elevation: 10,
+  },
+  hintText: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' },
+  hintSubText: { color: 'rgba(255, 255, 255, 0.8)', fontSize: 11, marginTop: 4 },
 });
 
 export default FridgeMainScreen;
