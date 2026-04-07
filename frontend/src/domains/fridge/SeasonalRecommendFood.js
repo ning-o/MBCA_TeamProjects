@@ -8,14 +8,14 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'; // useSafeAreaInsets 추가
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'; // [조치] useSafeAreaInsets 추가
 
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
 import apiClient from '../../common/api/api_client';
 
 const SeasonalRecommendFood = () => {
-  const insets = useSafeAreaInsets(); // 기기별 상단 노치 높이 확보
+  const insets = useSafeAreaInsets(); // [조치] 기기별 상단 노치 높이 확보
   const [loading, setLoading] = useState(true);
   const [seasonalRecommend, setSeasonalRecommend] = useState(null);
 

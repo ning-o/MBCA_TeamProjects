@@ -44,6 +44,14 @@ class TikkleRecipeRecommender:
             "설 탕": "설탕",
             " 참기름": "참기름",
             " 간장": "간장",
+            "진간장": "간장",
+            "두부": "두부",
+            "찌개용두부": "두부",
+            "부침용두부": "두부",
+            "돼지고기": "돼지고기",
+            "삼겹살": "돼지고기",
+            "목살": "돼지고기",
+            "돼지": "돼지고기",
         }
 
     def normalize_ingredient(self, value: str | None) -> str | None:
