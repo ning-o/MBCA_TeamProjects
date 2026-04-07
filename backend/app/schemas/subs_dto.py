@@ -15,7 +15,7 @@ class UserSubsResponse(BaseModel):
     user_id: int
     master_id: Optional[int] = None
     bundle_id: Optional[int] = None
-    payment_date: int
+    created_at: datetime
     is_auto_pay: bool
 
     class Config:
@@ -41,11 +41,13 @@ class SubsResponse(BaseModel):
     class Config:
         orm_mode = True
  
-# 구독 서비스 카테고리들 가져오기
+# 구독 서비스 로고 정보 가져오기
 class SubsLogoResponse(BaseModel):    
-    logo_img: str
+    id: int
     category: str
-
+    logo_img: str
+    base_price: int
+    
     class Config:
         orm_mode = True
 

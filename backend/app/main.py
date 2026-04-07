@@ -69,3 +69,7 @@ app.include_router(subs_recommend, prefix="/api/subs", tags=["Subs Recommend"])
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(fridge_recommend_router, prefix="/api/fridge", tags=["Fridge Recommend"])
 app.include_router(llm_recommend_router, prefix="/api/fridge", tags=["Fridge LLM Recommend"])
+
+# subs db 데이터 저장용
+# from app.api.subs.temp_inset_subsdata import router
+# app.include_router(router, prefix="/api/subs", tags=["Subs"])
