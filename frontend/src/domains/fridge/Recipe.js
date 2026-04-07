@@ -12,53 +12,78 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
-
-// [수정]: 하드코딩된 SERVER_URL 대신 공통 apiClient를 임포트합니다.
 import apiClient from '../../common/api/api_client';
 
 const { height } = Dimensions.get('window');
 
+const getDifficultyText = (value) =>{
+  const num = Number(value);
+
+  if(num ===1) return "쉬움";
+  if(num ===2) return "보통";
+  if(num ===3) return "어려움";
+
+  return value ?? '-';
+}
 const RecipeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [recipes, setRecipes] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const buildInputStock = (inventoryData) => {
+  const stock = {};
 
-  // [수정]: fetch 대신 apiClient.post를 사용하여 네트워크 요청을 수행합니다.
-  const fetchRecommendations = async () => {
-    try {
-      setLoading(true);
+  (inventoryData || []).forEach((item) => {
+    const name = item.item_name || item.name || item.ingredient_name;
+    const quantity = item.quantity ?? item.amount ?? 1;
 
-      // 테스트용 페이로드 데이터
-      const payload = {
-        input_stock: {
-          계란: 2,
-          양파: 5,
-          대파: 3,
-          간장: 30,
-          참기름: 60,
-        },
-        top_k: 5,
-      };
+    if (!name) return;
+    stock[name] = quantity;
+  });
 
-      /**
-       * [변경 포인트]
-       * 1. 하드코딩된 IP 주소를 완전히 제거했습니다.
-       * 2. apiClient가 config.js의 설정을 따라 자동으로 현재 접속된 IP의 8000번 포트를 바라봅니다.
-       * 3. apiClient 내부의 타임아웃(10초) 설정을 따르므로 별도의 AbortController 로직이 필요 없습니다.
-       */
-      const data = await apiClient.post('/api/fridge/recommend/test', payload);
+  return stock;
+};
 
-      console.log("[3] 응답 데이터 수신 완료:", data);
+const fetchRecommendations = async () => {
+  try {
+    setLoading(true);
 
-      setRecipes(data.recommendations || []);
-      setSelectedIndex(0);
-    } catch (error) {
-      console.log("[ERROR] fetchRecommendations:", error);
-      // apiClient 인터셉터에서 이미 Alert을 띄워주지만, 상세 에러 확인을 위해 로그를 남깁니다.
-    } finally {
-      setLoading(false);
-    }
-  };
+    // 1) 실제 냉장고 재고 조회
+    const inventoryResult = await apiClient.get('/api/fridge/inventory/1');
+    console.log('[1] inventory raw =', inventoryResult);
+
+    // apiClient가 data만 반환한다고 가정
+    const inventoryList =
+      inventoryResult?.items ||
+      inventoryResult?.inventory ||
+      inventoryResult?.data ||
+      inventoryResult ||
+      [];
+
+    console.log('[2] inventory list =', inventoryList);
+
+    // 2) 추천용 input_stock 변환
+    const input_stock = buildInputStock(inventoryList);
+    console.log('[3] input_stock =', input_stock);
+
+    // 3) 추천 API 호출
+    const result = await apiClient.post('/api/fridge/recommend', {
+      input_stock,
+      top_k: 5,
+    });
+
+    console.log('[4] recommend result =', result);
+
+    setRecipes(result?.recipes || []);
+    setSelectedIndex(0);
+  } catch (error) {
+    console.log('[ERROR] fetchRecommendations:', error);
+    console.log('[ERROR] detail:', error?.response?.data?.detail);
+    console.log('[ERROR] status:', error?.response?.status);
+    console.log('[ERROR] data:', error?.response?.data);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchRecommendations();
@@ -67,9 +92,9 @@ const RecipeScreen = () => {
   const selectedRecipe = recipes[selectedIndex] || null;
 
   const matchRateText = useMemo(() => {
-    if (!selectedRecipe) return '0%';
-    return `${Math.round((selectedRecipe.score || 0) * 100)}%`;
-  }, [selectedRecipe]);
+  if (!selectedRecipe) return '0%';
+  return `${Math.round((selectedRecipe.match_score || 0) * 100)}%`;
+}, [selectedRecipe]);
 
   const ingredientItems = useMemo(() => {
     if (!selectedRecipe) return [];
@@ -90,37 +115,37 @@ const RecipeScreen = () => {
   }, [selectedRecipe]);
 
   const aiReason = useMemo(() => {
-    if (!selectedRecipe) return '추천 결과가 없습니다.';
+  if (!selectedRecipe) return '추천 결과가 없습니다.';
 
-    const daysLeftText =
-      selectedRecipe.days_left != null
-        ? `${selectedRecipe.days_left}일 안에 활용 추천`
-        : '빠르게 활용 추천';
+  const matched = selectedRecipe.available_ingredients || [];
+  const missing = selectedRecipe.missing_ingredients || [];
+  const difficultyText = getDifficultyText(selectedRecipe.difficulty);
 
-    const matchedText =
-      selectedRecipe.matched_ingredients?.length > 0
-        ? selectedRecipe.matched_ingredients.join(', ')
-        : '현재 보유 재료';
+  const matchedText =
+    matched.length > 0 ? matched.join(', ') : '보유 재료';
 
-    return `현재 재료와의 매칭률이 높습니다. 특히 ${matchedText}를 바로 활용할 수 있고, ${daysLeftText} 기준 테스트 추천 레시피입니다.`;
-  }, [selectedRecipe]);
+  const missingText =
+    missing.length > 0 ? missing.join(', ') : '추가 재료 없이 바로 조리 가능';
+
+  return `현재 냉장고 재료와의 매칭률이 높아 추천된 메뉴입니다. ${matchedText}를 바로 활용할 수 있고, 부족한 재료는 ${missingText}입니다. 조리시간은 ${selectedRecipe.cooking_time ?? '-'}분 정도이며 난이도는 ${difficultyText}입니다.`;
+}, [selectedRecipe]);
 
   const recipeSteps = useMemo(() => {
-    if (!selectedRecipe) return '레시피 설명이 없습니다.';
+  if (!selectedRecipe) return '레시피 설명이 없습니다.';
 
-    const missing =
-      selectedRecipe.missing_ingredients?.length > 0
-        ? selectedRecipe.missing_ingredients.join(', ')
-        : '없음';
+  const available = selectedRecipe.available_ingredients || [];
+  const missing = selectedRecipe.missing_ingredients || [];
+  const difficultyText = getDifficultyText(selectedRecipe.difficulty);
 
-    return [
-      `1. 추천 레시피: ${selectedRecipe.recipe_name || '-'}`,
-      `2. 현재 보유 재료를 먼저 준비합니다: ${(selectedRecipe.matched_ingredients || []).join(', ') || '-'}`,
-      `3. 부족한 재료가 있다면 추가 준비합니다: ${missing}`,
-      `4. 조리시간은 ${selectedRecipe.cooking_time ?? '-'}분, 난이도는 ${selectedRecipe.difficulty ?? '-'}입니다.`,
-      `5. 현재 단계는 테스트 화면이므로 상세 조리법 대신 추천 결과를 우선 검증합니다.`,
-    ].join('\n');
-  }, [selectedRecipe]);
+  return [
+    `1. 메뉴: ${selectedRecipe.recipe_name || '-'}`,
+    `2. 먼저 준비할 재료: ${available.length > 0 ? available.join(', ') : '-'}`,
+    `3. 추가로 필요한 재료: ${missing.length > 0 ? missing.join(', ') : '없음'}`,
+    `4. 예상 조리시간: ${selectedRecipe.cooking_time ?? '-'}분`,
+    `5. 난이도: ${difficultyText}`,
+    `6. 조리 전 재료를 손질하고, 준비된 재료부터 순서대로 사용해 주세요.`,
+  ].join('\n');
+}, [selectedRecipe]);
 
   const tags = useMemo(() => {
     if (!selectedRecipe) return [];
@@ -180,7 +205,7 @@ const RecipeScreen = () => {
 
                 <Text style={styles.infoText}>
                   ⏱ {selectedRecipe.cooking_time ?? '-'} mins  |  난이도 :{' '}
-                  {selectedRecipe.difficulty ?? '-'}
+                  {getDifficultyText(selectedRecipe.difficulty)}
                 </Text>
                 <Text style={styles.infoSubText}>
                   남은 유통기한(테스트): {selectedRecipe.days_left ?? '-'}일
@@ -215,7 +240,7 @@ const RecipeScreen = () => {
                           index === selectedIndex && styles.miniCardTitleSelected,
                         ]}
                       >
-                        매칭률 {Math.round((item.score || 0) * 100)}%
+                        매칭률 {Math.round((item.match_score || 0) * 100)}%
                       </Text>
                     </TouchableOpacity>
                   ))}

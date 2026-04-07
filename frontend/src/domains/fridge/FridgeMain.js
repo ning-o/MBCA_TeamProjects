@@ -6,7 +6,6 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native'; // use
 
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
-import OCRConfirmScreen from './OCRConfirmScreen';
 import apiClient from '../../common/api/api_client'; // apiClient 임포트 추가
 
 const { width, height } = Dimensions.get('window');
@@ -42,7 +41,7 @@ const FridgeMainScreen = ({ route }) => {
   const [inputFridgeName, setInputFridgeName] = useState("띠끌이네"); 
   const [confirmedFridgeName, setConfirmedFridgeName] = useState("티끌이네"); 
 
-  const recommendedMenu = "제철 달래 된장찌개";
+  const recommendedMenu = " AI의 제철음식 추천 받아보기";
 
   // [유통기한 임박 재료 상태 관리]
   const [imminentIngredient, setImminentIngredient] = useState({ name: "재료 없음", dDay: "-" });
@@ -228,9 +227,9 @@ const FridgeMainScreen = ({ route }) => {
               sub="제철 음식이 땡기지 않나요?" 
               alignRight={true} 
               isSubCenter={true} 
-              onPress={() => Alert.alert("LLM 연동 준비중", "현재 예산 페이스와 제철 식재료를 분석하여 장보기 최적화 메뉴 추천 기능을 준비중입니다.")} 
+              onPress={() => navigation.navigate('SeasonalRecommendFood')}
             />
-
+            
             <MenuCard 
               title="장본 재료 추가하기" 
               renderIcon={() => <Camera size={20} color="#1E293B" />} 
@@ -257,10 +256,8 @@ const FridgeMainScreen = ({ route }) => {
               title="냉장고 털기" 
               renderIcon={() => <Soup size={20} color="#1E293B" />} 
               value={topRecommendedRecipe} 
-              sub="다른 요리 추천" 
               alignRight={true}
               onPress={() => navigation.navigate('Recipe', { recipeName: topRecommendedRecipe })} 
-              onSubPress={() => navigation.navigate('RecipeList')} 
             />
           </View>
         </View>
@@ -597,6 +594,7 @@ const styles = StyleSheet.create({
   },
   hintText: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' },
   hintSubText: { color: 'rgba(255, 255, 255, 0.8)', fontSize: 11, marginTop: 4 },
+
 });
 
 export default FridgeMainScreen;
