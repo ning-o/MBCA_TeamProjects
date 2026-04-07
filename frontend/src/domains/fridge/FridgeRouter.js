@@ -7,7 +7,7 @@ import RecipeScreen from './Recipe';
 import OCRConfirmScreen from './OCRConfirmScreen';
 import RecipeList from './RecipeList';
 import CustomCameraScreen from './FridgeComponents/CustomCameraScreen';
-
+import SeasonalRecommendFood from './SeasonalRecommendFood';
 const Stack = createStackNavigator();
 
 const FridgeRouter = () => {
@@ -20,6 +20,7 @@ const FridgeRouter = () => {
       <Stack.Screen name="RecipeList" component={RecipeList} />
       <Stack.Screen name="OCRConfirm" component={OCRConfirmScreen} />
       <Stack.Screen name="CustomCamera" component={CustomCameraScreen} />
+      <Stack.Screen name="SeasonalRecommendFood" component={SeasonalRecommendFood}/>
     </Stack.Navigator>
   );
 };

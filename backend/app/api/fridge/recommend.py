@@ -1,25 +1,30 @@
 from fastapi import APIRouter, HTTPException
-from app.ml.fridge.recommend_recipe import TikkleRecipeRecommender
+from pydantic import BaseModel
+from typing import Dict
+import traceback
+
+from app.core.recommend.recommend_recipe import recommend_recipes
 
 router = APIRouter()
-recommender = TikkleRecipeRecommender()
 
+class RecommendRequest(BaseModel):
+    input_stock: Dict[str, int | float]
+    top_k: int = 5
 
-@router.post("/recommend/test")
-def recommend_test(payload: dict):
+@router.post("/recommend")
+def recommend_recipe_api(data: RecommendRequest):
     try:
-        input_stock = payload.get("input_stock", {})
-        top_k = payload.get("top_k", 5)
-
-        recommendations = recommender.recommend(
-            input_stock=input_stock,
-            top_k=top_k,
+        recipes = recommend_recipes(
+            input_stock=data.input_stock,
+            top_k=data.top_k,
         )
 
         return {
-            "input_stock": input_stock,
-            "recommendations": recommendations,
+            "input_stock": data.input_stock,
+            "count": len(recipes),
+            "recipes": recipes,
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {str(e)}")
