@@ -12,8 +12,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
-
-// [수정]: 하드코딩된 SERVER_URL 대신 공통 apiClient를 임포트합니다.
 import apiClient from '../../common/api/api_client';
 
 const { height } = Dimensions.get('window');
@@ -31,8 +29,6 @@ const RecipeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [recipes, setRecipes] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-
-  // [수정]: fetch 대신 apiClient.post를 사용하여 네트워크 요청을 수행합니다.
   const buildInputStock = (inventoryData) => {
   const stock = {};
 

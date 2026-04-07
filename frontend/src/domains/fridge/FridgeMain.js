@@ -256,10 +256,8 @@ const FridgeMainScreen = ({ route }) => {
               title="냉장고 털기" 
               renderIcon={() => <Soup size={20} color="#1E293B" />} 
               value={topRecommendedRecipe} 
-              sub="다른 요리 추천" 
               alignRight={true}
               onPress={() => navigation.navigate('Recipe', { recipeName: topRecommendedRecipe })} 
-              onSubPress={() => navigation.navigate('RecipeList')} 
             />
           </View>
         </View>

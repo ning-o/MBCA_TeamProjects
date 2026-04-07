@@ -8,38 +8,32 @@ import {
   Alert,
   TouchableOpacity,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'; // useSafeAreaInsets 추가
 
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
 import apiClient from '../../common/api/api_client';
 
 const SeasonalRecommendFood = () => {
+  const insets = useSafeAreaInsets(); // 기기별 상단 노치 높이 확보
   const [loading, setLoading] = useState(true);
   const [seasonalRecommend, setSeasonalRecommend] = useState(null);
+
+  // 헤더 고정 높이(56) + 노치 높이(insets.top)를 합산하여 여백 설정
+  const headerHeight = 56 + insets.top;
 
   const fetchSeasonalRecommend = async () => {
     try {
       setLoading(true);
-
       const response = await apiClient.post('/api/fridge/recommend/seasonal', {
         ingredients: [],
         top_k: 3,
       });
-
       console.log('[SeasonalRecommendFood] 제철 음식 원본:', response);
-
       setSeasonalRecommend(response.data ?? response);
     } catch (error) {
-      console.error(
-        '[SeasonalRecommendFood] 제철 음식 조회 실패:',
-        error?.response?.data || error
-      );
-
-      Alert.alert(
-        '오류',
-        error?.response?.data?.detail || '제철 음식을 불러오지 못했습니다.'
-      );
+      console.error('[SeasonalRecommendFood] 제철 음식 조회 실패:', error?.response?.data || error);
+      Alert.alert('오류', error?.response?.data?.detail || '제철 음식을 불러오지 못했습니다.');
     } finally {
       setLoading(false);
     }
@@ -50,19 +44,22 @@ const SeasonalRecommendFood = () => {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      {!loading && <Header />}
+    // edges={['bottom']} 설정을 통해 SafeAreaView가 상단 여백을 중복으로 잡지 않도록 조절
+    <SafeAreaView style={styles.container} edges={['left', 'right', 'bottom']}>
+      <Header />
 
       <ScrollView
+        // [핵심] 헤더의 absolute 높이만큼 paddingTop을 부여하여 콘텐츠가 밀려 내려오게 조치
         contentContainerStyle={[
           styles.content,
+          { paddingTop: headerHeight + 20 }, // 헤더 높이 + 기본 여백(20)
           loading && styles.loadingContent,
         ]}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
           <View style={styles.loadingBox}>
-            <ActivityIndicator size="large" />
+            <ActivityIndicator size="large" color="#3B82F6" />
             <Text style={styles.loadingText}>AI가 계절과 잘 어울리는 제철 음식을 가져오는중입니다...</Text>
           </View>
         ) : (
@@ -80,30 +77,17 @@ const SeasonalRecommendFood = () => {
                     <Text style={styles.rank}>
                       {item.rank}. {item.menu_name}
                     </Text>
-
                     <Text style={styles.text}>이유: {item.reason}</Text>
+                    <Text style={styles.text}>제철 포인트: {item.seasonal_point}</Text>
                     <Text style={styles.text}>
-                      제철 포인트: {item.seasonal_point}
+                      재료: {Array.isArray(item.main_ingredients) ? item.main_ingredients.join(', ') : ''}
                     </Text>
-                    <Text style={styles.text}>
-                      재료:{' '}
-                      {Array.isArray(item.main_ingredients)
-                        ? item.main_ingredients.join(', ')
-                        : ''}
-                    </Text>
-                    <Text style={styles.text}>
-                      대체재: {item.substitute_note}
-                    </Text>
-                    <Text style={styles.text}>
-                      레시피: {item.quick_recipe}
-                    </Text>
+                    <Text style={styles.text}>대체재: {item.substitute_note}</Text>
+                    <Text style={styles.text}>레시피: {item.quick_recipe}</Text>
                   </View>
                 ))}
 
-                <TouchableOpacity
-                  style={styles.retryBtn}
-                  onPress={fetchSeasonalRecommend}
-                >
+                <TouchableOpacity style={styles.retryBtn} onPress={fetchSeasonalRecommend}>
                   <Text style={styles.retryBtnText}>다시 추천받기</Text>
                 </TouchableOpacity>
               </>
@@ -118,7 +102,7 @@ const SeasonalRecommendFood = () => {
         )}
       </ScrollView>
 
-      {!loading && <Footer />}
+      <Footer />
     </SafeAreaView>
   );
 };
@@ -131,7 +115,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFF',
   },
   content: {
-    padding: 20,
+    paddingHorizontal: 20,
     paddingBottom: 120,
   },
   loadingContent: {
@@ -167,6 +151,9 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 14,
     elevation: 3,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
   },
   rank: {
     fontSize: 18,
