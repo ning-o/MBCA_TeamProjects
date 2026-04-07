@@ -16,7 +16,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     SIGNUP: '/api/auth/signup',
     LOGIN: '/api/auth/login',
-  },
+},
 
 //  [냉장고 관리 도메인]
   FRIDGE: { // [카테고리 이름]

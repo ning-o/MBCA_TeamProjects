@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Eye, EyeOff, CheckCircle2, XCircle } from 'lucide-react-native';
 import BASE_URL, { API_ENDPOINTS } from '../../common/api/config.js';
 
+
 export function SignUpScreen() {
   const navigation = useNavigation();
 
@@ -70,6 +71,9 @@ export function SignUpScreen() {
 
   const requestUrl = `${BASE_URL}${API_ENDPOINTS.AUTH.SIGNUP}`;
 
+  console.log('회원가입 요청 URL:', requestUrl);
+  console.log('회원가입 요청:', payload);
+
   try {
     setIsSubmitting(true);
 
@@ -82,8 +86,16 @@ export function SignUpScreen() {
     });
 
     const data = await response.json().catch(() => ({}));
+    console.log('회원가입 응답 status:', response.status);
+    console.log('회원가입 응답 body:', data);
 
     if (response.ok) {
+      setUserId('');
+      setPassword('');
+      setConfirmPassword('');
+      setEmail('');
+      setIdCheckResult(null);
+
       Alert.alert('성공', '회원가입이 완료되었습니다!', [
         { text: '확인', onPress: () => navigation.navigate('Login') }
       ]);
