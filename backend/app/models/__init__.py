@@ -4,8 +4,7 @@
 # 형식: from .폴더명.파일명 import 클래스이름
 # 예시: from .fridge.models import Fridge (냉장고 파트 예시)
 
-from .common import User, TotalSaving, CommonCode
-
+from app.models.common import User, TotalSaving, CommonCode
 from .fridge.fridge_models import (
     RefAdmin, 
     Refrigerator, 

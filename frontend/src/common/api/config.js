@@ -13,10 +13,11 @@ const MY_CURRENT_IP = Constants.expoConfig?.hostUri?.split(':')[0] || 'localhost
 const BASE_URL = `http://${MY_CURRENT_IP}:8000`;
 
 export const API_ENDPOINTS = {
-// [공통 도메인]
-  AUTH: { // [카테고리 이름]
-    // LOGIN: '/api/auth/login',    // [세부 주소], 엔드포인트 추가 예시
+  AUTH: {
+    SIGNUP: '/api/auth/signup',
+    LOGIN: '/api/auth/login',
   },
+
 //  [냉장고 관리 도메인]
   FRIDGE: { // [카테고리 이름]
     GET_INVENTORY: (invenId) => `/api/fridge/inventory/${invenId}`,
