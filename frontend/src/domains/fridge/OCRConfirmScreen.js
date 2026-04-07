@@ -17,36 +17,43 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../common/components/Header';
-
-// [추가]: 중앙 집중식 API 관리를 위해 설계해둔 apiClient를 임포트.
-// [이유]: 파일마다 IP를 하드코딩하지 않고 환경변수(.env) 기반의 baseUrl을 공통으로 사용하기 위함. 
 import apiClient from '../../common/api/api_client';
 
+/**
+ * [Android 전용 설정]
+ * LayoutAnimation은 Android에서 기본적으로 비활성화되어 있으므로
+ * UIManager를 통해 명시적으로 활성화해야 애니메이션이 정상 작동함.
+ */
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// [수정]: 기존에 하드코딩되어 있던 API_BASE_URL 변수 선언을 삭제.
-// [이유]: 통신 기본 주소는 apiClient 내부에서 config.js(또는 .env)의 값을 자동으로 참조하도록 설계되어 있기 때문.
-
+/**
+ * OCRConfirmScreen: 영수증 분석 결과 검토 및 품목 데이터 확정 화면
+ * - OCR 분석 결과를 사용자에게 보여주고 수동 보정(명칭, 수량, 가격) 기회 제공
+ * - 최종 확정된 데이터를 서버(DB)에 일괄 저장하는 트랜잭션 전 단계 역할
+ */
 const OCRConfirmScreen = ({ route }) => {
   const navigation = useNavigation();
 
+  // [파라미터 확보] FridgeMain 또는 Camera에서 전달받은 인벤토리 ID 및 이미지 경로
   const invenId = route.params?.invenId || 1;
-
   const photoUri = route.params?.photoUri;
   const isManual = route.params?.isManual || false;
 
+  // [상태 관리] 로딩 여부, 분석된 아이템 목록, 현재 수정 중인 카드 인덱스
   const [loading, setLoading] = useState(!isManual);
   const [items, setItems] = useState([]);
   const [expandedIndex, setExpandedIndex] = useState(isManual ? 0 : null);
 
   useEffect(() => {
+    // 직접 추가 모드일 경우 빈 입력 필드 생성 후 종료
     if (isManual) {
       setItems([{ rawName: '', matchedName: '', quantity: '1', price: '' }]);
       return;
     }
 
+    // OCR 모드인데 이미지가 없다면 예외 처리
     if (!photoUri) {
       Alert.alert('오류', '촬영된 이미지가 없습니다.');
       setLoading(false);
@@ -56,12 +63,18 @@ const OCRConfirmScreen = ({ route }) => {
     runOCR();
   }, [isManual, photoUri]);
 
+  /**
+   * [Helper] 이미지 파일 시스템 경로에서 파일명 추출
+   */
   const getFileNameFromUri = (uri) => {
     const last = uri.split('/').pop();
     if (!last) return `ocr_${Date.now()}.jpg`;
     return last.includes('.') ? last : `${last}.jpg`;
   };
 
+  /**
+   * [Helper] 확장자 기반 MIME Type 결정 (이미지 서버 전송용)
+   */
   const getMimeTypeFromUri = (uri) => {
     const lower = uri.toLowerCase();
     if (lower.endsWith('.png')) return 'image/png';
@@ -70,6 +83,10 @@ const OCRConfirmScreen = ({ route }) => {
     return 'image/jpeg';
   };
 
+  /**
+   * normalizeParsedItems: 서버 응답 데이터(다양한 키값)를 클라이언트 규격으로 정규화
+   * - 백엔드 파서(parser.py)가 반환하는 여러 형태의 응답 구조를 앱 내 UI에서 쓸 수 있게 통일함
+   */
   const normalizeParsedItems = (responseData) => {
     const parsed =
       responseData?.parsed_items ||
@@ -102,10 +119,9 @@ const OCRConfirmScreen = ({ route }) => {
       }));
     }
 
-    // 현재 사장님 백엔드 구조 대응 (객체 형태일 때)
+    // 객체(Key-Value) 형태의 수량 데이터 응답 대응
     if (responseData?.quantities && typeof responseData.quantities === 'object') {
       return Object.entries(responseData.quantities).map(([name, qty], index) => ({
-        // [수정]: 여기서도 1번부터 시작하기 위해 index + 1 적용
         id: index + 1, 
         rawName: name,
         matchedName: name,
@@ -117,6 +133,12 @@ const OCRConfirmScreen = ({ route }) => {
     return [];
   };
 
+  /**
+   * [API 연동 1] runOCR: 영수증 이미지 분석 요청
+   * - 엔드포인트: apiClient.urls.FRIDGE.OCR (/api/fridge/ocr)
+   * - 방식: multipart/form-data (FormData 객체를 통해 파일 바이너리 전송)
+   * - 특징: apiClient 전역 설정을 이용하되, 파일 전송을 위해 Content-Type만 개별 Override함
+   */
   const runOCR = async () => {
     try {
       setLoading(true);
@@ -126,6 +148,7 @@ const OCRConfirmScreen = ({ route }) => {
       const fileName = getFileNameFromUri(photoUri);
       const mimeType = getMimeTypeFromUri(photoUri);
 
+      // 파일 데이터 포장 (Multipart 규격)
       const formData = new FormData();
       formData.append('file', {
         uri: photoUri,
@@ -133,18 +156,13 @@ const OCRConfirmScreen = ({ route }) => {
         type: mimeType,
       });
 
-      // 백엔드 엔드포인트에 맞춰 둘 중 하나 사용
-      // 1) 원문 OCR만 확인용: /api/fridge/ocr/test
-      // 2) 품목 파싱까지 포함: /api/fridge/ocr/analyze
-      
-      // [수정]: 기존 fetch API 통신 로직을 제거하고, apiClient.post 방식으로 교체.
-      // [이유]: fetch 사용 시 필요했던 수동 에러 처리(response.ok)와 JSON 파싱 과정을 apiClient 인터셉터가 자동으로 처리해주어 중복 코드를 방지.
       console.log('[OCR] 요청 URL:', apiClient.urls.FRIDGE.OCR);
 
+      // API 호출: apiClient 인터셉터(JWT, 공통 에러 처리) 로직이 자동으로 적용됨
       const data = await apiClient.post(apiClient.urls.FRIDGE.OCR, formData, {
         headers: {
           Accept: 'application/json',
-          'Content-Type': 'multipart/form-data',
+          'Content-Type': 'multipart/form-data', // 파일 전송을 위한 헤더 설정
         },
       });
 
@@ -174,17 +192,27 @@ const OCRConfirmScreen = ({ route }) => {
     }
   };
 
+  /**
+   * [UI/UX] 토글 제어
+   * LayoutAnimation을 사용하여 카드가 펼쳐지고 접히는 동작을 부드럽게 구현
+   */
   const toggleExpand = (index) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandedIndex(expandedIndex === index ? null : index);
   };
 
+  /**
+   * [데이터 보정] 특정 필드(이름, 수량 등) 수정 시 상태 업데이트
+   */
   const updateItem = (index, field, value) => {
     const newItems = [...items];
     newItems[index][field] = value;
     setItems(newItems);
   };
 
+  /**
+   * [데이터 관리] 품목 삭제
+   */
   const removeItem = (index) => {
     if (items.length <= 1) {
       Alert.alert('알림', '최소 하나의 항목은 있어야 합니다.');
@@ -198,12 +226,21 @@ const OCRConfirmScreen = ({ route }) => {
     else if (expandedIndex > index) setExpandedIndex(expandedIndex - 1);
   };
 
+  /**
+   * [데이터 관리] 신규 품목 필드 추가
+   */
   const addItem = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setItems([...items, { rawName: '', matchedName: '', quantity: '1', price: '' }]);
     setExpandedIndex(items.length);
   };
 
+  /**
+   * [API 연동 2] handleSave: 확정된 품목 리스트 일괄 저장
+   * - 엔드포인트: apiClient.urls.FRIDGE.SAVE_ITEMS (/api/fridge/save-items)
+   * - 데이터 구조: Array of Objects (JSON 규격)
+   * - 역할: 클라이언트에서 보정한 데이터를 백엔드 유통기한 예측 AI 파이프라인으로 전송함
+   */
   const handleSave = async () => {
     try {
       if (!items || items.length === 0) {
@@ -211,47 +248,57 @@ const OCRConfirmScreen = ({ route }) => {
         return;
       }
 
-      // [실전 구동용 페이로드 구성]
-      // 1. inven_id: 실제 접속 중인 냉장고 ID 사용
-      // 2. ingredient_id: OCR 결과(normalizeParsedItems)에서 매칭된 실제 마스터 ID
-      // 3. storage_type: 스키마 규격에 맞게 문자열 "1"(냉장)로 전송
-      // 4. quantity: 숫자형(Int)으로 변환
-      // 5. phurchase_date: 현재 날짜 전송
-      
+      // 서버 DTO 규격에 맞춰 페이로드 구성 (IngredientCreate 스키마 대응)
       const payload = items.map((item) => ({
         inven_id: invenId, 
         ingredient_id: item.id,
-        ingredient_name: item.matchedName, // 실제 이름 전송
-        storage_type: String(item.storageType || "1"),
+        ingredient_name: item.matchedName,
+        storage_type: String(item.storageType || "1"), // 기본값 냉장(1) 할당
         quantity: parseInt(item.quantity) || 1, 
-        phurchase_date: new Date().toISOString().split('T')[0], 
+        phurchase_date: new Date().toISOString().split('T')[0], // 오늘 날짜 기록
       }));
 
-      console.log('[SAVE] 실전 데이터 전송 시작:', JSON.stringify(payload));
+      console.log('[SAVE] 데이터 전송 시작:', JSON.stringify(payload));
 
-      // [실제 API 호출 활성화]
+      // API 호출: apiClient.js에 정의된 기본 'application/json' 헤더가 사용됨
       const responseData = await apiClient.post(apiClient.urls.FRIDGE.SAVE_ITEMS, payload);
-      
       console.log('[SAVE] 서버 응답 결과:', responseData);
 
+      // [비즈니스 로직] 저장 결과 상태에 따른 후속 조치
       if (responseData.status === "success") {
         Alert.alert(
           '저장 완료',
           `${responseData.saved_count}개의 항목이 냉장고에 등록되었습니다.`,
-          [{ text: '확인', onPress: () => navigation.navigate('FridgeMain') }]
+          [
+            { 
+              text: '확인', 
+              // 성공 시 메인 냉장고 화면(Tab 내 FridgeMain)으로 네비게이션 이동
+              onPress: () => navigation.navigate('MainTabs', { screen: 'FridgeMain' }) 
+            }
+          ]
         );
       } else {
-        // 일부 실패 시 에러 메시지 표시
-        const errorMsg = responseData.errors?.map(e => e.error).join('\n');
-        Alert.alert('부분 저장 실패', `일부 항목 저장 중 오류가 발생했습니다.\n${errorMsg}`);
+        // partial_success 등 일부 실패 케이스 대응 (DB 미등록 품목 등)
+        const errorMsg = responseData.errors?.map(e => e.error).join('\n') || "미등록 품목 제외";
+        Alert.alert(
+          '일부 저장 성공', 
+          `일부 항목을 제외하고 저장이 완료되었습니다.\n(제외 사유: 미등록 품목)\n\n${errorMsg}`,
+          [
+            { 
+              text: '확인', 
+              onPress: () => navigation.navigate('FridgeMain', { screen: 'FridgeMain' }) 
+            }
+          ]
+        );
       }
 
     } catch (error) {
-      console.error('[SAVE] 실전 구동 중 치명적 오류:', error);
+      console.error('[SAVE] 데이터 저장 중 치명적 오류:', error);
       Alert.alert('통신 오류', '서버와 연결할 수 없거나 데이터 규격이 맞지 않습니다.');
     }
   };
 
+  // 뷰 렌더링 영역 (구조 및 스타일 보존)
   return (
     <SafeAreaView style={styles.container}>
       <Header />

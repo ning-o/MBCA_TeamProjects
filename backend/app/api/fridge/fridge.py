@@ -6,10 +6,10 @@ from datetime import datetime, timedelta, date
 from typing import List, Dict, Any
 
 from app.core.database import get_db
-from app.models.fridge import fridge_models  # DB 모델 (Pantry, RefIngredients 등)
+from app.models.fridge import fridge_models  # DB 모델
 from app.schemas import fridge_schema        # 스키마
 from app.schemas.fridge_schema import IngredientCreate, IngredientResponse
-from app.ml.fridge.expiry_logic import tikkle_oracle  # 유통기한 예측 오라클 모델
+from app.ml.fridge.expiry_logic import tikkle_oracle  # 유통기한 예측 모델
 
 router = APIRouter()
 
@@ -174,11 +174,22 @@ def get_fridge_inventory(inven_id: int, db: Session = Depends(get_db)):
         fridge_models.RefIngredients.inven_id == inven_id
     ).all()
 
+    # 프론트 탭 필터링을 위한 대분류 카테고리 매핑
+    BROAD_CAT_MAP = {
+        '축산물': '육류', '포장육': '육류', '양념육': '육류', '햄류': '육류', '소시지': '육류', '베이컨': '육류',
+        '채소류': '신선식품', '과일류': '신선식품', '허브류': '신선식품', '신선편이': '신선식품',
+        '수산물': '해산물', '수산가공품': '해산물', '어묵': '해산물',
+        '유제품': '유제품', '유가공품': '유제품', '발효유': '유제품', '계란류': '유제품'
+    }
+
     # 프론트엔드 형식에 맞게 데이터 가공
     inventory = []
     for ref, name, cat in results:
         # 오늘 날짜와 유통기한(d_days) 차이 계산하여 D-Day 산출
         d_day_val = (ref.d_days - date.today()).days
+        
+        # DB의 상세 카테고리를 프론트의 탭 분류 기준에 맞게 변환
+        broad_cat = BROAD_CAT_MAP.get(cat, "기타")
         
         inventory.append({
             "id": str(ref.ref_no),
@@ -186,7 +197,7 @@ def get_fridge_inventory(inven_id: int, db: Session = Depends(get_db)):
             "count": str(ref.quantity),
             "dday": d_day_val,
             "storage": "냉장" if ref.storage_type == "1" else "냉동" if ref.storage_type == "2" else "실온",
-            "category": cat
+            "category": broad_cat  # 변환된 카테고리로 전송
         })
         
     return inventory
