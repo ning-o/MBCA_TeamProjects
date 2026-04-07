@@ -76,7 +76,6 @@ const CustomAddSubs = ({ visible, onClose, onSubmit }) => {
     }
   };
 
-  
 
   return (
     <Modal
