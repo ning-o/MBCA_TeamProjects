@@ -4,10 +4,22 @@ import {
   StyleSheet, 
   Text, 
   View,   
-  Dimensions 
 } from 'react-native';
 
-const Subsfooter = ()=>{
+const Subsfooter = ({ subs })=>{
+
+    // 카테고리
+  const getCategoryString = (subs) => {
+    if (!subs || subs.length === 0) return "";
+
+    const uniqueCategories = [...new Set(subs.map(item => item.category))];
+    return uniqueCategories.join(', ');
+  };
+
+  // 합계
+  const totalPrice = (!subs || subs.length === 0)
+    ? 0 : subs.reduce((sum, item) => sum + Number(item.base_price || 0), 0);
+
     return (
     <View style={styles.container}>    
       <View style={styles.footer}>
@@ -15,10 +27,10 @@ const Subsfooter = ()=>{
           <Text>총액</Text>
         </View>
         <View style={[styles.footerItem, {paddingHorizontal: 10}]}>
-          <Text>OTT, 통신사</Text>
+          <Text>{getCategoryString(subs)}</Text>
         </View>
         <View style={[styles.footerItem, {flex: 1}]}>
-          <Text>10,000</Text>
+          <Text>{totalPrice.toLocaleString()}</Text>
         </View>          
       </View>    
     </View>

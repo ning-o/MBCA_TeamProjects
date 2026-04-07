@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+
 import { SafeAreaView,useSafeAreaInsets } from 'react-native-safe-area-context';
 // [추가]useSafeAreaInsets : 현재 기기의 상, 하, 좌, 우 여백 값을 객체로 가져옴 (예: { top: 44, bottom: 34 ... }
 import { 
@@ -13,13 +15,41 @@ import {
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
 
+import BASE_URL, { API_ENDPOINTS } from './config';
+
 import SubsMainList from './SubsComponents/SubsMainList';
 import Subsfooter from './SubsComponents/SubsFooter';
 
 const { width, height } = Dimensions.get('window');
 
+// 사용자 구독 정보 데이터 불러오기
+export const getUserSubs = async (userId) => {
+  const res = await axios.get(
+    `${BASE_URL}${API_ENDPOINTS.SUBS.GET_USER_SUBS(userId)}`
+  );
+  return res.data;
+};
+
 export default function SubsMain() {
-  const insets = useSafeAreaInsets(); // [추가] 기기별 상단 노치 높이 계산
+  const insets = useSafeAreaInsets();
+  const [subs, setSubs] = useState([]);
+
+  const userId = 1; // 임시
+
+  // 시작시 사용자 구독 정보 가져오기
+  useEffect(() => {
+    const fetchSubs = async () => {
+      try {
+        const data = await getUserSubs(userId);
+        setSubs(data);
+      } catch (error) {
+        console.log('구독 데이터 불러오기 실패:', error);
+      }
+    };
+
+    fetchSubs();
+  }, [userId]);
+
 
   return (
     <View style={{flex:1}}>
@@ -31,10 +61,10 @@ export default function SubsMain() {
                   
         <View style={styles.mainbox}>        
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>              
-            <SubsMainList />          
+            <SubsMainList subs={subs} />  
           </ScrollView>
 
-          <Subsfooter />        
+          <Subsfooter subs={subs} />
         </View>      
       </View>
       <Footer />

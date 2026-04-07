@@ -1,232 +1,368 @@
-import React, { useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  StyleSheet, 
+import React, { useEffect, useState } from 'react';
+import {
   TouchableOpacity,
-  Text, 
-  View,   
+  Text,
+  View,
   Image,
   ScrollView,
-  Dimensions 
+  ActivityIndicator,
 } from 'react-native';
 
+import axios from 'axios';
 import LOGO_IMAGES from './../SubsImageURL';
 import SubsChangeList from './SubsChangeList';
+import BASE_URL, { API_ENDPOINTS } from './config';
 
-// 새 컴포넌트 예시 (SubsChangeView.js 라고 가정)
-const SubsChange = ({ data, onBack }) => {        
+const SubsChange = ({ data, onBack }) => {
+  const [isChanging, setIsChanging] = useState(false);
+  const [priceData, setPriceData] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
 
-    // 임시 데이터 (DB 가져올 예정)
-    const priceData = {
-        netflix: { prices: ['9,500', '13,500', '17,000'], details: ['광고형', '스탠다드', '프리미엄'] },
-        disney: { prices: ['9,900', '13,900'], details: ['스탠다드', '프리미엄'] },
-        youtube: { prices: ['14,900'], details: ['프리미엄 단일 요금제'] },
-    };
+  const [selectedService, setSelectedService] = useState({
+    name: data.name,
+    logo: data.logo,
+    price: data.price,
+  });
 
-    const [isChanging, setIsChanging] = useState(false);
-    const [selectedPrice, setSelectedPrice] = useState(null);
-    const [selectedDetail, setSelectedDetail] = useState(null);
-    const [selectedService, setselectedService] = useState({
-        name: data.name,
-        logo: data.logo,
-        price: data.price
-    });
+  const [selectedPlanId, setSelectedPlanId] = useState(null);
+  const [selectedPrice, setSelectedPrice] = useState(null);
+  const [selectedDetail, setSelectedDetail] = useState(null);
 
-    const handlePriceSelect = async (price, index, details) => {
-        if (selectedPrice === price) {
-            setSelectedPrice(null);
-            setSelectedDetail(null);
-            return;
+  // 카테고리별 목록 조회
+  const fetchCategoryData = async (category) => {
+    try {
+      setLoading(true);
+
+      const res = await axios.get(
+        `${BASE_URL}${API_ENDPOINTS.SUBS.GET_BY_CATEGORY(category)}`        
+      );
+
+      const groupedData = {};
+
+      res.data.forEach((item) => {
+        const logoKey = item.logo_img;
+
+        if (!groupedData[logoKey]) {
+          groupedData[logoKey] = [];
         }
 
-        setSelectedPrice(price)
-        setSelectedDetail(details[index])
-    }
-    
-    // 요금제 변경시 (예정)
-    const handlechangePrice = async (price, index) => {
-
-    }
-
-    // 로고 변경 처리 함수
-    const handleServiceSelect = (logoName) => {
-        setselectedService({
-            name: logoName, // 예시: 이름을 대문자로
-            logo: logoName,
-            price: priceData[logoName]?.prices[0] || '0' // 첫 번째 요금제로 초기화
+        groupedData[logoKey].push({
+          id: item.id,
+          price: item.base_price,
+          category: item.category,
+          logo_img: item.logo_img,
         });
-        setIsChanging(false); // 리스트 닫기
-        setSelectedPrice(null); // 이전 선택 초기화
+      });
+
+      setPriceData(groupedData);
+    } catch (error) {
+      console.log('카테고리 목록 조회 실패:', error);
+      setPriceData({});
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 상세 조회
+  const fetchDetailById = async (subsId) => {
+    try {
+      setDetailLoading(true);
+
+      const res = await axios.get(
+        `${BASE_URL}${API_ENDPOINTS.SUBS.GET_DETAIL(subsId)}`
+      );
+      
+      // SELECT * 결과 전체 저장
+      setSelectedDetail(res.data);
+    } catch (error) {
+      console.log('상세 조회 실패:', error);
+      setSelectedDetail(null);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (data?.category) {
+      fetchCategoryData(data.category);
+    }
+  }, [data?.category]);
+
+  const handlePriceSelect = async (plan) => {
+    if (selectedPlanId === plan.id) {
+      setSelectedPlanId(null);
+      setSelectedPrice(null);
+      setSelectedDetail(null);
+      return;
+    }
+
+    setSelectedPlanId(plan.id);
+    setSelectedPrice(plan.price);
+    await fetchDetailById(plan.id);
+  };
+
+  const handlechangePrice = async () => {
+    try {
+        if (!selectedPlanId) return;
+
+        await axios.post(
+            config.SUBS.UPDATE_USER_SUB(data.user_id, selectedPlanId, data.id)
+        );
+        
+    } catch (error) {
+        console.log('요금제 변경 실패:', error);
+        }
     };
 
-    const currentPriceInfo = priceData[selectedService.logo] || { prices: [], details: [] };
+  const handleServiceSelect = (logoName) => {
+    const firstPlan = priceData[logoName]?.[0];
+
+    setSelectedService({
+      name: logoName,
+      logo: logoName,
+      price: firstPlan?.price || 0,
+    });
+
+    setIsChanging(false);
+    setSelectedPlanId(null);
+    setSelectedPrice(null);
+    setSelectedDetail(null);
+  };
+
+  const currentPriceInfo = priceData[selectedService.logo] || [];
 
   return (
     <View style={styles.container}>
-        <ScrollView 
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={true}
-        >
-            <View style={styles.header}>
-                <Text style={{marginRight:10}}>{data.category}</Text>
-                <Image source={LOGO_IMAGES[data.logo]} style={[styles.imageLogo, {marginRight:20}]}></Image>
-                <Text style={{marginRight:10}}>{data.name}</Text>
-                <Text style={{marginLeft:'auto'}}>{Number(data.price).toLocaleString()}원</Text>
-                <View style={styles.headerButtonbox}>
-                    <TouchableOpacity 
-                        style={[styles.headerButton, isChanging && { opacity: 0.5 }]} 
-                        onPress={() => { handlechangePrice(); onBack(); }}
-                        disabled={isChanging} 
-                        Marcus
-                    >
-                        <Text style={[{ fontSize: 12 }, isChanging && { color: '#A0A0A0' }]}>
-                            변경{"\n"}하기
-                        </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={styles.headerButton} onPress={() => setIsChanging(true)}>
-                        <Text style={{fontSize: 12}}>다른{"\n"}구독</Text>
-                    </TouchableOpacity>
-                </View>
-            </View>
-            
-            {!isChanging ? (
-            <>
-            <View style={styles.bottomprice}>
-                {/* 구독 서비스 요금제 출력 */}
-                <View style={styles.bottompriceList}>
-                    <View style={{width:'100%', alignItems: 'center', borderBottomWidth:1}}>
-                        <Image source={LOGO_IMAGES[selectedService.logo]} style={[styles.imageLogo, {marginVertical:5}]}></Image>
-                    </View>
-                    {currentPriceInfo.prices.map((item, index) => (
-                        <TouchableOpacity key={index}
-                            style={[styles.bottompricebox, selectedPrice == item && { backgroundColor: '#aaa' }]}
-                            onPress={() => handlePriceSelect(item, index, currentPriceInfo.details)}
-                        >
-                            <Text>{item}</Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-                {/* 상세정보 출력 */}
-                
-                <View style={styles.bottompricedetail}>   
-                    {selectedPrice && (                
-                    <Text>{selectedDetail}</Text>
-                    )}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+      >
+        <View style={styles.header}>
+          <Text style={{ marginRight: 10 }}>{data.category}</Text>
+          <Image source={LOGO_IMAGES[data.logo]} style={[styles.imageLogo, { marginRight: 20 }]}/>
+          <Text style={{ marginRight: 10 }}>{data.name}</Text>
+          <Text style={{ marginLeft: 'auto' }}>
+            {Number(data.price).toLocaleString()}원
+          </Text>
+          <View style={styles.headerButtonbox}>
+            <TouchableOpacity
+              style={[styles.headerButton, isChanging && { opacity: 0.5 }]}
+              onPress={() => {
+                handlechangePrice();
+                onBack();
+              }}
+              disabled={isChanging}
+            >
+              <Text style={[{ fontSize: 12 }, isChanging && { color: '#A0A0A0' }]}>
+                변경{'\n'}하기
+              </Text>
+            </TouchableOpacity>
 
-                    <TouchableOpacity onPress={onBack} style={{marginLeft:'auto', marginTop:'auto', backgroundColor:'#ddd'}}>
-                        <Text>뒤로 가기</Text>
-                    </TouchableOpacity>
-                </View>                
-            </View>
-            </>
-            ) : (
-            // === 다른 구독 클릭 시 새 공간 ===
-            <View style={styles.ChangeContainer}>
-                <SubsChangeList
-                category={data.category} 
-                onBack={() => setIsChanging(false)} 
-                onSelect={handleServiceSelect}
+            <TouchableOpacity
+              style={styles.headerButton}
+              onPress={() => setIsChanging(true)}
+            >
+              <Text style={{ fontSize: 12 }}>
+                다른{'\n'}구독
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {!isChanging ? (
+          <View style={styles.bottomprice}>
+            <View style={styles.bottompriceList}>
+              <View style={{width: '100%', alignItems: 'center', borderBottomWidth: 1,}}>
+                <Image
+                  source={LOGO_IMAGES[selectedService.logo]}
+                  style={[styles.imageLogo, { marginVertical: 5 }]}
                 />
-            </View>
-            )}
-            
-        </ScrollView>
-        
-        
-        
-        {/* 선택된 데이터 출력 */}
-        {/* <View style={styles.infoCard}>
-            <Text>카테고리: {data.category}</Text>
-            <Text>서비스명: {data.name}</Text>
-            <Text>현재 가격: {data.price}원</Text>
-        </View> */}
+              </View>
 
-        {/* 돌아가기 */}
-        {/* <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Text>돌아가기</Text>
-        </TouchableOpacity> */}
+              {loading ? (
+                <View style={styles.loadingBox}>
+                  <ActivityIndicator size="small" />
+                  <Text style={{ marginTop: 6 }}>목록 불러오는 중...</Text>
+                </View>
+              ) : currentPriceInfo.length > 0 ? (
+                currentPriceInfo.map((plan) => (
+                  <TouchableOpacity
+                    key={plan.id}
+                    style={[
+                      styles.bottompricebox,
+                      selectedPlanId === plan.id && styles.selectedPriceBox,
+                    ]}
+                    onPress={() => handlePriceSelect(plan)}
+                  >
+                    <Text>{Number(plan.price).toLocaleString()}원</Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.loadingBox}>
+                  <Text>요금제 데이터 없음</Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.bottompricedetail}>
+              {detailLoading ? (
+                <View style={styles.detailCenter}>
+                  <ActivityIndicator size="small" />
+                  <Text style={{ marginTop: 8 }}>상세 불러오는 중...</Text>
+                </View>
+              ) : selectedPrice ? (
+                <ScrollView contentContainerStyle={{ padding: 10 }}>
+                  <Text style={styles.detailTitle}>
+                    선택 가격 - {Number(selectedPrice).toLocaleString()}원
+                  </Text>
+                  {selectedDetail ? (
+                    <Text style={styles.detailText}>
+                      {JSON.stringify(selectedDetail, null, 2)}
+                    </Text>
+                  ) : (
+                    <Text style={styles.detailText}>상세 정보 없음</Text>
+                  )}
+                </ScrollView>
+              ) : (
+                <View style={styles.detailCenter}>
+                  <Text></Text>
+                </View>
+              )}
+
+              <TouchableOpacity onPress={onBack} style={styles.backButton}>
+                <Text>뒤로 가기</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.ChangeContainer}>
+            <SubsChangeList
+              category={data.category}
+              onBack={() => setIsChanging(false)}
+              onSelect={handleServiceSelect}
+            />
+          </View>
+        )}
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,       
-        borderBottomWidth:1,         
-    },
+  container: {
+    flex: 1,
+    borderBottomWidth: 1,
+  },
 
-    scrollView: {
-        flex: 1,        
-    },
+  scrollView: {
+    flex: 1,
+  },
 
-    scrollContent: {
-        flexGrow: 1,
-    },
+  scrollContent: {
+    flexGrow: 1,
+  },
 
-    header: {
-        // justifyContent: 'center',
-        alignItems: 'center',
-        flexDirection: 'row',
-        height:50,
-        marginLeft:5,        
-    },
+  header: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    height: 50,
+    marginLeft: 5,
+  },
 
-    imageLogo:{
-        width: 30, 
-        height: 30,
-        borderRadius: 100 / 2,
-        borderWidth:1,
-    },
+  imageLogo: {
+    width: 30,
+    height: 30,
+    borderRadius: 50,
+    borderWidth: 1,
+  },
 
-    headerButtonbox: {
-        marginLeft: 'auto',        
-        flexDirection: 'row',
-        paddingLeft:10,
-        borderLeftWidth:1,        
-    },
+  headerButtonbox: {
+    marginLeft: 'auto',
+    flexDirection: 'row',
+    paddingLeft: 10,
+    borderLeftWidth: 1,
+  },
 
-    headerButton: {
-        width:35, 
-        height:45, 
-        backgroundColor:'lightgray',
-        marginRight:10,        
-        justifyContent: 'center',
-        alignItems: 'center',
-    },    
+  headerButton: {
+    width: 35,
+    height: 45,
+    backgroundColor: 'lightgray',
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
-    bottomprice:{
-        flex:1,
-        flexDirection: 'row',
-        borderTopWidth:1,
-        // margin: ,
-        
-    },
+  bottomprice: {
+    flex: 1,
+    flexDirection: 'row',
+    borderTopWidth: 1,
+  },
 
-    bottompriceList:{    
-        borderRightWidth:1,
-        flex:1,
-        
-    },
+  bottompriceList: {
+    borderRightWidth: 1,
+    flex: 1,
+  },
 
-    bottompricebox:{    
-        padding:3,    
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        width: '100%',    
-        borderBottomWidth:1,     
-    },
+  logoTopBox: {
+    width: '100%',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+  },
 
-    bottompricedetail:{
-        flex: 6,
-    },
+  bottompricebox: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    borderBottomWidth: 1,
+  },
 
-    // 다른 구독 클릭후 화면
-    ChangeContainer: {
-        flex: 1,     
-        backgroundColor: '#fff',
-    },
+  selectedPriceBox: {
+    backgroundColor: '#aaa',
+  },
 
-})
+  bottompricedetail: {
+    flex: 6,
+    minHeight: 300,
+  },
+
+  loadingBox: {
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  detailCenter: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  detailTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+
+  detailText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  backButton: {
+    marginLeft: 'auto',
+    marginTop: 'auto',
+    backgroundColor: '#ddd',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+
+  ChangeContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+});
 
 export default SubsChange;

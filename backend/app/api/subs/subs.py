@@ -53,3 +53,8 @@ def create_bundle_subscription(user_id: int, bundle_id: int, db: Session = Depen
     return CRUD.create_subscription(db=db, user_id=user_id, bundle_id=bundle_id)
 
 
+#  구독 서비스 변경시 유저 데이터 수정
+@router.post("/{user_id}/updateSubs/{master_id}/{change_subs_id}", response_model=dict)
+def update_master_subscription(user_id: int, change_subs_id: int, master_id: int, db: Session = Depends(get_db)):
+    return CRUD.update_subscription(db=db, user_id=user_id, change_subs_id=change_subs_id, master_id=master_id,)
+

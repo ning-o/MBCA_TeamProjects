@@ -7,7 +7,6 @@ import {
   View,   
   Image,
   ScrollView,
-  Dimensions 
 } from 'react-native';
 
 import LOGO_IMAGES from './../SubsImageURL';
@@ -15,7 +14,7 @@ import LOGO_IMAGES from './../SubsImageURL';
 // 새 컴포넌트 예시 (SubsChangeView.js 라고 가정)
 const SubsChangeList = ({ category, onBack, onSelect }) => {
     
-    const templogo = ['netflix', 'disney']; // db에서 카테고리(category)로 검색하여 로그 사진들 가져올 예정      
+    const logo = category; // db에서 카테고리(category)로 검색하여 로그 사진들 가져올 예정      
 
   return (
     <View style={styles.container}>
@@ -25,7 +24,7 @@ const SubsChangeList = ({ category, onBack, onSelect }) => {
             showsVerticalScrollIndicator={true}
         >
             <View style={styles.logoListbox}>
-                {templogo.map((item, index) => (
+                {logo.map((item, index) => (
                     <View key={index} style={styles.logoList}>                        
                         <TouchableOpacity key={index}                            
                             onPress={() => onSelect(item)}
