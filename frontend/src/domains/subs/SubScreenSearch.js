@@ -1,8 +1,8 @@
-import React from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   StyleSheet, 
-  Text, 
   View,   
   ScrollView,
   Dimensions 
@@ -17,8 +17,45 @@ import Subsfooter from './SubsComponents/SubsFooter';
 
 const { width, height } = Dimensions.get('window');
 
+// 사용자 구독 정보 데이터 불러오기
+export const getUserSubs = async (userId) => {
+  const res = await axios.get(
+    `${BASE_URL}${API_ENDPOINTS.SUBS.GET_USER_SUBS(userId)}`
+  );
+  return res.data;
+};
+
+// 구독 카테고리 종류 데이터 불러오기
+export const fetchUserSubscriptions = async () => {
+  const res = await axios.get(
+    `${BASE_URL}${API_ENDPOINTS.SUBS.GET_CATEGORIES}`
+  );
+  return res.data;
+};
+
 export default function SubScreenSearch() {
-  
+  const [subs, setSubs] = useState([]);
+  const [category, setCategory] = useState([]);
+
+  const userId = 1; // 임시
+
+  // 시작시 사용자 구독 정보 가져오기
+  useEffect(() => {
+    const fetchSubs = async () => {
+      try {
+        const data = await getUserSubs(userId);
+        const categoryData = await fetchUserSubscriptions();
+
+        setSubs(data);
+        setCategory(categoryData);
+      } catch (error) {
+        console.log('구독 데이터 불러오기 실패:', error);
+      }
+    };
+
+    fetchSubs();
+  }, [userId]);
+
 
   return (    
     <View style={styles.container}>
@@ -27,10 +64,10 @@ export default function SubScreenSearch() {
       <View style={styles.mainbox}>
         
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>    
-          <SubsSearchList />        
+          <SubsSearchList subs={subs} category={category} />
         </ScrollView>
 
-        <Subsfooter />
+        <Subsfooter subs={subs} />
         
       </View>
       {/* [고정] 공용 푸터 사용 */}

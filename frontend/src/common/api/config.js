@@ -24,8 +24,14 @@ export const API_ENDPOINTS = {
     SAVE_ITEMS: '/api/fridge/save-items', 
   },
 //  [구독 관리 도메인]
-  SUBS: { // [카테고리 이름]
-    // LIST: '/api/subs/list',      // [세부 주소], 엔드포인트 추가 예시
+  SUBS: {
+  GET_CATEGORIES: '/api/v1/subs/categories',
+  GET_BY_CATEGORY: (category) => `/api/v1/subs/categories/${category}`,
+  GET_DETAIL: (subsId) => `/api/v1/subs/subs/${subsId}`,
+  GET_USER_SUBS: (userId) => `/api/v1/subs/${userId}/search`,
+  CREATE_MASTER_SUB: (userId, masterId) => `/api/v1/subs/${userId}/insertSubsMaster/${masterId}`,
+  CREATE_BUNDLE_SUB: (userId, bundleId) => `/api/v1/subs/${userId}/insertSubsBundle/${bundleId}`,
+  UPDATE_USER_SUB: (userId, masterId, change_subs_id) => `/api/v1/subs/${userId}/updateSubs/${masterId}/${change_subs_id}`,  
   },
 };
 

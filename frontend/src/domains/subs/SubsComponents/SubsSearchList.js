@@ -1,170 +1,226 @@
-
-// SubscribeSearchList.js
 import React, { useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  StyleSheet, 
+import {
   TouchableOpacity,
-  Text, 
-  View,   
+  Text,
+  View,
   Image,
-  Dimensions 
 } from 'react-native';
+import axios from 'axios';
 
 import CustomAddModal from './CustomAddSubs';
 import LOGO_IMAGES from './../SubsImageURL';
+import BASE_URL, { API_ENDPOINTS } from './config';
 
-const SubsSearchList = ()=>{    
-    const tempData = ['netflix', 'disney']; // 내 카테고리 로고 url 데이터
-    const tempcategory = ['OTT', '통신사', '쇼핑'] // 저장된 카테고리들 
-    const tempcategorysubscribe = ['netflix', 'disney']; // 카테고리로 검색하여 해당하는 로고 url key 가져와서 사용
-    const subscribetempData = [ // name(selectedsubscribe)으로 검색하여 구독 서비스들 정보 데이터
-        {'name':'netplex','logo':'img','price':'10000','category':'OTT'},
-        {'name':'netplex','logo':'img','price':'20000','category':'OTT'},
-    ] 
-    const subscribetempDataDetail = ['설명들'] // api로 받아올 구독 요금제대한 상세 정보들    
+const SubsSearchList = ({ subs, category, styles }) => {
+  const [categorySubs, setCategorySubs] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedsubscribe, setSelectedsubscribe] = useState(null);
+  const [selectedprice, setSelectedprice] = useState(null);
+  const [selectedDetail, setSelectedDetail] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
 
-    const [selectedCategory, setSelectedCategory] = useState(null);
-    const [selectedsubscribe, setSelectedsubscribe] = useState(null);
-    const [selectedprice, setSelectedprice] = useState(null);
-    const [isModalVisible, setIsModalVisible] = useState(false);
+  const getLogo = (subs) => {
+    if (!subs || subs.length === 0) return [];
 
-    //(예정) 내 구독서비스 데이터 가져오기 
-    const fetchUserSubscriptions = async () => {
+    return subs.map((item) => ({
+      id: item.id,
+      logo: item.logo_img,
+    }));
+  };
 
+  const logoList = [...new Map(
+    categorySubs.map((item) => [item.logo_img, item])
+  ).values()];
+
+  const subscribeData = categorySubs.filter(
+    (item) => item.logo_img === selectedsubscribe
+  );
+
+  const handleCategorySelect = async (categoryName) => {
+    if (selectedCategory === categoryName) {
+      setSelectedCategory(null);
+      setSelectedsubscribe(null);
+      setSelectedprice(null);
+      setSelectedDetail(null);
+      setCategorySubs([]);
+      return;
     }
 
-    // 카테고리 선택시 동작
-    const handleCategorySelect = async (categoryName) => {
-        // 1. 선택된 카테고리 상태 업데이트
-        if (selectedCategory === categoryName) {
-            setSelectedCategory(null);
-            setSelectedsubscribe(null); // 해제 시 데이터 초기화
-            setSelectedprice(null);
-            return;
-        }
+    try {
+      setSelectedCategory(categoryName);
+      setSelectedsubscribe(null);
+      setSelectedprice(null);
+      setSelectedDetail(null);
 
-        setSelectedCategory(categoryName);
-        setSelectedsubscribe(null); // 이전 카테고리에서 선택한 로고 초기화
-        setSelectedprice(null);
+      const response = await axios.get(
+        `${BASE_URL}${API_ENDPOINTS.GET_BY_CATEGORY(categoryName)}`
+      );
+
+      setCategorySubs(response.data);
+    } catch (error) {
+      console.error('카테고리별 구독 서비스 조회 실패:', error);
+      setCategorySubs([]);
+    }
+  };
+
+  const handlelogoSelect = (logoName) => {
+    if (selectedsubscribe === logoName) {
+      setSelectedsubscribe(null);
+      setSelectedprice(null);
+      setSelectedDetail(null);
+      return;
     }
 
-    // 카테고리 선택 후 로고 선택시 동작
-    const handlelogoSelect = async (logoName) => {
-        // 1. 선택된 카테고리 상태 업데이트
-        if (selectedsubscribe === logoName) {
-            setSelectedsubscribe(null);
-            setSelectedprice(null);
-            return;
-        }
+    setSelectedsubscribe(logoName);
+    setSelectedprice(null);
+    setSelectedDetail(null);
+  };
 
-        setSelectedsubscribe(logoName); 
-        setSelectedprice(null);       
+  const handlepriceSelect = async (subsId, price) => {
+    if (selectedprice === price) {
+      setSelectedprice(null);
+      setSelectedDetail(null);
+      return;
     }
 
-    const handlepriceSelect = async (price) => {
-        // 1. 선택된 카테고리 상태 업데이트
-        if (selectedprice === price) {
-            setSelectedprice(null);            
-            return;
-        }
+    try {
+      setSelectedprice(price);
 
-        setSelectedprice(price);        
+      const response = await axios.get(
+        `${BASE_URL}${API_ENDPOINTS.GET_DETAIL(subsId)}`
+      );
+
+      setSelectedDetail(response.data);
+    } catch (error) {
+      console.error('요금제 상세 조회 실패:', error);
+      setSelectedDetail(null);
     }
+  };
 
-    // 직접 입력시 추가로 db에 저장 (예정)
-    const handleCustomSubmit = (value) => {
-        console.log("새로 추가된 서비스:", value);
-        
-    };
+  const handleCustomSubmit = (value) => {
+    console.log('새로 추가된 서비스:', value);
+  };
 
-    return (
+  return (
     <View style={styles.safeArea}>
-        <View style={styles.header}>
-            <Text style={{height:24, borderBottomWidth:1,}}>내 구독 서비스</Text>
-            <View style={styles.headerList}>
-                <View style={styles.headerbox}>
-                    {tempData.map((item, index) => (
-                        <View key={index} style={styles.headerboxlist}>
-                            <Image source={LOGO_IMAGES[item]} style={styles.imageLogo}></Image>
-                        </View>
-                    ))}
-                </View>
-            </View>
+      <View style={styles.header}>
+        <Text style={{ height: 24, borderBottomWidth: 1 }}>내 구독 서비스</Text>
+        <View style={styles.headerList}>
+          <View style={styles.headerbox}>
+            {getLogo(subs).map((item) => (
+              <View key={item.id} style={styles.headerboxlist}>
+                <Image
+                  source={LOGO_IMAGES[item.logo]}
+                  style={styles.imageLogo}
+                />
+              </View>
+            ))}
+          </View>
         </View>
+      </View>
 
-        {/* 중단 구독 카테고리 선택 */}        
-        <View style={styles.container}>
-            <View style={styles.categoryList}>
-                {tempcategory.map((item, index) => (
-                    <TouchableOpacity key={index} 
-                        style={[styles.categorybox, selectedCategory == item && { backgroundColor: '#aaa' }]} 
-                        onPress={() => handleCategorySelect(item)}
-                    >
-                        <Text>{item}</Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
-            {/* 수정예정 */}
-            <TouchableOpacity style={styles.categorycreatebutton} onPress={() => setIsModalVisible(true)}>
-                <Text>직접입력</Text>
+      <View style={styles.container}>
+        <View style={styles.categoryList}>
+          {category.map((item) => (
+            <TouchableOpacity
+              key={item}
+              style={[
+                styles.categorybox,
+                selectedCategory === item && { backgroundColor: '#aaa' },
+              ]}
+              onPress={() => handleCategorySelect(item)}
+            >
+              <Text>{item}</Text>
             </TouchableOpacity>
-
-            {/* 직접 입력 컴포넌트 */}
-            <CustomAddModal 
-                visible={isModalVisible} 
-                onClose={() => setIsModalVisible(false)}
-                onSubmit={handleCustomSubmit}
-            />
+          ))}
         </View>
 
-        {/* 하단 구독 서비스 선택 */}
-        {selectedCategory && (
+        <TouchableOpacity
+          style={styles.categorycreatebutton}
+          onPress={() => setIsModalVisible(true)}
+        >
+          <Text>직접입력</Text>
+        </TouchableOpacity>
+
+        <CustomAddModal
+          visible={isModalVisible}
+          onClose={() => setIsModalVisible(false)}
+          onSubmit={handleCustomSubmit}
+        />
+      </View>
+
+      {selectedCategory && (
         <View style={styles.bottom}>
-            <View style={styles.bottomcategoryList}>                
-                {tempcategorysubscribe.map((item, index) => (                
-                    <TouchableOpacity key={index} 
-                        style={[styles.bottomcategorybox, selectedsubscribe == item && { backgroundColor: '#aaa' }]} 
-                        onPress={() => handlelogoSelect(item)}
-                    >
-                        <Image source={LOGO_IMAGES[item]} style={styles.imageLogo}></Image>
-                    </TouchableOpacity>
-                ))}
-            </View>
+          <View style={styles.bottomcategoryList}>
+            {logoList.map((item) => (
+              <TouchableOpacity
+                key={item.logo_img}
+                style={[
+                  styles.bottomcategorybox,
+                  selectedsubscribe === item.logo_img && { backgroundColor: '#aaa' },
+                ]}
+                onPress={() => handlelogoSelect(item.logo_img)}
+              >
+                <Image
+                  source={LOGO_IMAGES[item.logo_img]}
+                  style={styles.imageLogo}
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
 
-            {selectedsubscribe && (
+          {selectedsubscribe && (
             <View style={styles.bottomprice}>
-                {/* 구독 서비스 요금제 출력 */}
-                <View style={styles.bottompriceList}>
-                    <View style={[styles.bottompricebox, {'borderBottomWidth':1, 'height':50}]}>
-                        <Image source={LOGO_IMAGES[selectedsubscribe]} style={styles.imageLogo}></Image>
-                    </View>
-
-                    {subscribetempData.map((item, index) => (
-                        <TouchableOpacity key={index}
-                            style={[styles.bottompricebox, selectedprice == item.price && { backgroundColor: '#aaa' }]} 
-                            onPress={() => handlepriceSelect(item['price'])}
-                        >
-                            <Text>{item.price}</Text>
-                            
-                        </TouchableOpacity>
-                    ))}
+              <View style={styles.bottompriceList}>
+                <View
+                  style={[
+                    styles.bottompricebox,
+                    { borderBottomWidth: 1, height: 50 },
+                  ]}
+                >
+                  <Image
+                    source={LOGO_IMAGES[selectedsubscribe]}
+                    style={styles.imageLogo}
+                  />
                 </View>
-                {/* 상세정보 출력 */}
-                
-                <View style={styles.bottompricedetail}>   
-                    {selectedprice && (                
-                    <Text>{subscribetempDataDetail}</Text>
+
+                {subscribeData.map((item) => (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.bottompricebox,
+                      selectedprice === item.base_price && { backgroundColor: '#aaa' },
+                    ]}
+                    onPress={() => handlepriceSelect(item.id, item.base_price)}
+                  >
+                    <Text>{item.base_price}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <View style={styles.bottompricedetail}>
+                {selectedDetail && (
+                  <View>
+                    <Text>{selectedDetail.name}</Text>
+                    <Text>선택 가격 - {Number(selectedDetail.base_price).toLocaleString()}원</Text>                    
+                    {selectedDetail ? (
+                        <Text style={styles.detailText}>
+                            {JSON.stringify(selectedDetail.detail, null, 2)}
+                        </Text>
+                        ) : (
+                        <Text>상세 정보 없음</Text>
                     )}
-                </View>                
+                  </View>
+                )}
+              </View>
             </View>
-            )}
+          )}
         </View>
-        )}
+      )}
     </View>
   );
-}
-// navigation.navigate('Details', { itemId: 86, otherParam: '안녕!' })}
+};
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

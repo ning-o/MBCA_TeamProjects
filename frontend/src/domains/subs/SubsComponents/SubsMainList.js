@@ -6,15 +6,35 @@ import {
   Text, 
   View,   
   Image,
-  Dimensions 
 } from 'react-native';
 
 import LOGO_IMAGES from './../SubsImageURL';
 import SubsChange from './SubsChange';
 
-const SubsMainList = ()=>{
-    const tempData = ['netflix','disney']
-    const subscribetempData = [{'name':'netflix','logo':'netflix','price':'10000','category':'OTT'}]    
+const SubsMainList = ( { subs } )=>{
+    
+    // 사용자가 구독한 구독 로고 이미지 - list형식으로 변환
+    const getLogo = (subs) => {
+      if (!subs || subs.length === 0) return [];
+
+      return subs.map(item => ({
+        id: item.id,          // user_sub_id
+        logo: item.logo_img   // 로고
+      }));      
+    };
+
+    // 사용자가 구독한 구독 서비스 정보 dict형식으로 변환
+    const userSubsInfo = (subs) => {
+      if (!subs || subs.length === 0) return [];
+
+      return subs.map(item => ({
+        id: item.id,
+        name: item.name,
+        logo_img: item.logo_img,
+        base_price: Number(item.base_price),
+        category: item.category
+      }));
+    };
 
     const [isChanging, setIsChanging] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null); // 데이터 전달용 변수
@@ -30,12 +50,10 @@ const SubsMainList = ()=>{
         <View style={styles.header}>
             <Text style={{borderBottomWidth:1}}>내 구독 리스트</Text>
             <View style={styles.headerbox}>
-                {tempData.map((item, index) => (
-                    <View key={index} style={styles.headerboxlist}>
-                        <View key={index} style={styles.headerboxlist}>
-                          <Image source={LOGO_IMAGES[item]} style={styles.imageLogo}></Image>
-                        </View>
-                    </View>
+                {getLogo(subs).map((item) => (
+                  <View key={item.id} style={styles.headerboxlist}>
+                    <Image source={LOGO_IMAGES[item.logo]} style={styles.imageLogo} />
+                  </View>
                 ))}
             </View>
         </View>
@@ -52,14 +70,14 @@ const SubsMainList = ()=>{
 
           <View style={styles.bottom}>
               <Text style={{borderBottomWidth:1, padding:5}}>구독 서비스 요금제 목록</Text>
-              {subscribetempData.map((item, index) => (
+              {userSubsInfo(subs).map((item, index) => (
                       <View key={index} style={styles.bottomboxlist}>                        
                           <Text style={[styles.bottombox, {flex:1,}]}>{item.category}</Text>
                           <View style={[styles.bottombox, {flex:4, flexDirection: 'row',}]}>
-                            <Image source={LOGO_IMAGES[item.logo]} style={styles.imageLogo}></Image>
+                            <Image source={LOGO_IMAGES[item.logo_img]} style={styles.imageLogo}></Image>
                             <Text style={{marginLeft:15}}>{item.name}</Text>
                           </View>
-                          <Text style={[styles.bottombox, {flex:2}]}>{item.price}</Text>
+                          <Text style={[styles.bottombox, {flex:2}]}>{item.base_price}</Text>
                           <TouchableOpacity style={[styles.bottombutton, {marginLeft:10}]} onPress={() => handleEditPress(item)}>
                               <Text>변경{'\n'}하기</Text>
                           </TouchableOpacity>
@@ -70,7 +88,7 @@ const SubsMainList = ()=>{
         ) : (
           // === 변경하기 클릭 시 새 공간 ===
         <View style={styles.ChangeContainer}>
-          <SubsChange 
+          <SubsChange             
             data={selectedItem} 
             onBack={() => setIsChanging(false)} 
           />

@@ -1,5 +1,5 @@
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import Any, Optional
 from datetime import datetime
 
@@ -17,6 +17,12 @@ class UserSubsResponse(BaseModel):
     bundle_id: Optional[int] = None
     created_at: datetime
     is_auto_pay: bool
+
+    # master 테이블 join 결과
+    name: Optional[str] = None
+    logo_img: Optional[str] = None
+    category: Optional[str] = None
+    base_price: Optional[int] = None
 
     class Config:
         orm_mode = True
