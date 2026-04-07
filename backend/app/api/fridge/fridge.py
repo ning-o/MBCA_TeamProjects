@@ -88,13 +88,13 @@ def save_multiple_ingredients(
         try:
             # 1. 마스터 테이블(Pantry)에서 실제 식재료 이름 조회
             pantry_item = db.query(fridge_models.Pantry).filter(
-                fridge_models.Pantry.ingredient_id == item.ingredient_id
+                fridge_models.Pantry.ingredient_name == item.ingredient_name
             ).first()
 
             if not pantry_item:
                 errors.append({
-                    "ingredient_id": item.ingredient_id, 
-                    "error": "Pantry에서 식재료 마스터 정보를 찾을 수 없습니다."
+                    "ingredient_id": item.ingredient_name, 
+                    "error": f"'{item.ingredient_name}'을(를) Pantry에서 찾을 수 없습니다."
                 })
                 continue
 
@@ -121,7 +121,7 @@ def save_multiple_ingredients(
             # 5. DB Insert 객체 생성 (RefIngredients 테이블)
             new_ref_ingredient = fridge_models.RefIngredients(
                 inven_id=item.inven_id,
-                ingredient_id=item.ingredient_id,
+                ingredient_id=pantry_item.ingredient_id,
                 storage_type=str(item.storage_type),
                 d_days=calculated_d_days,  # AI가 계산한 최종 날짜 삽입
                 quantity=item.quantity,
@@ -155,3 +155,38 @@ def save_multiple_ingredients(
         return {"status": "partial_success", "saved_count": saved_count, "errors": errors}
     else:
         return {"status": "success", "saved_count": saved_count}
+    
+
+@router.get("/inventory/{inven_id}")
+def get_fridge_inventory(inven_id: int, db: Session = Depends(get_db)):
+    """
+    특정 냉장고(inven_id)에 담긴 모든 식재료 목록을 조회합니다.
+    Pantry 테이블과 Join하여 식재료 이름과 카테고리를 함께 가져옵니다.
+    """
+    results = db.query(
+        fridge_models.RefIngredients,
+        fridge_models.Pantry.ingredient_name,
+        fridge_models.Pantry.category
+    ).join(
+        fridge_models.Pantry, 
+        fridge_models.RefIngredients.ingredient_id == fridge_models.Pantry.ingredient_id
+    ).filter(
+        fridge_models.RefIngredients.inven_id == inven_id
+    ).all()
+
+    # 프론트엔드 형식에 맞게 데이터 가공
+    inventory = []
+    for ref, name, cat in results:
+        # 오늘 날짜와 유통기한(d_days) 차이 계산하여 D-Day 산출
+        d_day_val = (ref.d_days - date.today()).days
+        
+        inventory.append({
+            "id": str(ref.ref_no),
+            "name": name,
+            "count": str(ref.quantity),
+            "dday": d_day_val,
+            "storage": "냉장" if ref.storage_type == "1" else "냉동" if ref.storage_type == "2" else "실온",
+            "category": cat
+        })
+        
+    return inventory

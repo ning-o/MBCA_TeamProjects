@@ -144,10 +144,37 @@ NUMBER_ONLY_PATTERN = re.compile(
     r"^\d+(?:[.,]\d+)?$"
 )
 
+PURE_NUMBER_RE = re.compile(r"^[\d\W]+$")
+NUMBER_LIKE_RE = re.compile(r"^[\d\s,./xX×()+-]+(?:원|g|kg|ml|L|개|입|봉|팩|캔|병|박스)?$")
+SINGLE_CHAR_FOOD_BLOCKLIST = {"김"}  # 필요시 확장
+SUSPICIOUS_TOKENS = {
+    "김", "미", "쌀",  # 너무 짧아서 오인식되기 쉬운 것들은 문맥 없으면 보수적으로 처리
+}
+
 
 # =========================
 # 기본 유틸
 # =========================
+def is_suspicious_food_name(name: str) -> bool:
+    if not name:
+        return True
+
+    n = re.sub(r"\s+", "", name)
+
+    # 한 글자 품목은 매우 보수적으로
+    if len(n) == 1:
+        return True
+
+    # 숫자 포함이 많으면 품목 아님
+    digit_count = sum(ch.isdigit() for ch in n)
+    if digit_count > 0:
+        return True
+
+    # 자꾸 튀는 오인식 품목 차단
+    if n in SINGLE_CHAR_FOOD_BLOCKLIST:
+        return True
+
+    return False
 
 def normalize_spaces(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
