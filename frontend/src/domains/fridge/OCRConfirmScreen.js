@@ -211,43 +211,53 @@ const OCRConfirmScreen = ({ route }) => {
         return;
       }
 
-      // [실전 구동용 페이로드 구성]
-      // 1. inven_id: 실제 접속 중인 냉장고 ID 사용
-      // 2. ingredient_id: OCR 결과(normalizeParsedItems)에서 매칭된 실제 마스터 ID
-      // 3. storage_type: 스키마 규격에 맞게 문자열 "1"(냉장)로 전송
-      // 4. quantity: 숫자형(Int)으로 변환
-      // 5. phurchase_date: 현재 날짜 전송
-      
       const payload = items.map((item) => ({
         inven_id: invenId, 
         ingredient_id: item.id,
-        ingredient_name: item.matchedName, // 실제 이름 전송
+        ingredient_name: item.matchedName,
         storage_type: String(item.storageType || "1"),
         quantity: parseInt(item.quantity) || 1, 
         phurchase_date: new Date().toISOString().split('T')[0], 
       }));
 
-      console.log('[SAVE] 실전 데이터 전송 시작:', JSON.stringify(payload));
+      console.log('[SAVE] 데이터 전송 시작:', JSON.stringify(payload));
 
-      // [실제 API 호출 활성화]
       const responseData = await apiClient.post(apiClient.urls.FRIDGE.SAVE_ITEMS, payload);
-      
       console.log('[SAVE] 서버 응답 결과:', responseData);
 
+      // ==========================================================
+      // [UX 개선 구간] 알림 멘트 수정 및 홈으로 이동 로직 추가
+      // ==========================================================
       if (responseData.status === "success") {
         Alert.alert(
           '저장 완료',
           `${responseData.saved_count}개의 항목이 냉장고에 등록되었습니다.`,
-          [{ text: '확인', onPress: () => navigation.navigate('FridgeMain') }]
+          [
+            { 
+              text: '확인', 
+              // 확인을 누르면 바로 냉장고 메인 화면으로 이동
+              onPress: () => navigation.navigate('MainTabs', { screen: 'FridgeMain' }) 
+            }
+          ]
         );
       } else {
-        // 일부 실패 시 에러 메시지 표시
-        const errorMsg = responseData.errors?.map(e => e.error).join('\n');
-        Alert.alert('부분 저장 실패', `일부 항목 저장 중 오류가 발생했습니다.\n${errorMsg}`);
+        // 일부 실패시에도 안내 후 홈으로 보냄
+        const errorMsg = responseData.errors?.map(e => e.error).join('\n') || "미등록 품목 제외";
+        Alert.alert(
+          '일부 저장 성공', 
+          `일부 항목을 제외하고 저장이 완료되었습니다.\n(제외 사유: 미등록 품목)\n\n${errorMsg}`,
+          [
+            { 
+              text: '확인', 
+              onPress: () => navigation.navigate('FridgeMain', { screen: 'FridgeMain' }) 
+            }
+          ]
+        );
       }
+      // ==========================================================
 
     } catch (error) {
-      console.error('[SAVE] 실전 구동 중 치명적 오류:', error);
+      console.error('[SAVE] 데이터 저장 중 치명적 오류:', error);
       Alert.alert('통신 오류', '서버와 연결할 수 없거나 데이터 규격이 맞지 않습니다.');
     }
   };
