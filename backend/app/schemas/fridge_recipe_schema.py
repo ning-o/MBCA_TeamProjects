@@ -20,6 +20,7 @@ class RecipeResponse(BaseModel):
     difficulty: int                      # 난이도
     cooking_time: int                    # 조리 시간
     category: Optional[str] = None       # 요리 카테고리
+    expected_saving: int = 0
     ingredients: List[RecipeIngredientDetail] = [] # 포함된 재료 리스트
     class Config:
         from_attributes = True

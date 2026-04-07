@@ -11,6 +11,7 @@ class RefrigeratorBase(BaseModel):
 class RefrigeratorResponse(RefrigeratorBase):
     inven_id: int                        # 냉장고 고유 ID
     current_spent: int                   # 현재 지출액
+    total_savings: int = 0
     class Config:
         from_attributes = True           # ORM 모델 객체를 바로 DTO로 변환 허용
 
@@ -44,5 +45,13 @@ class PurchaseCreate(BaseModel):
     
 class PurchaseResponse(PurchaseCreate):
     phurchase_id: int                    # 구매 기록 고유 ID
+    class Config:
+        from_attributes = True
+
+class CompleteCookingRequest(BaseModel):
+    inven_id: int             # 냉장고 고유 ID
+    recipe_id: int            # 완료한 레시피 ID
+    servings: int = 1         # 인분 수 (기본값 1인분)
+    
     class Config:
         from_attributes = True

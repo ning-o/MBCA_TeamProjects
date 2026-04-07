@@ -1,12 +1,12 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'; // useCallback 추가
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput, Alert, Modal, TouchableWithoutFeedback, Keyboard, Animated } from 'react-native'; 
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Soup, Camera, ChevronRight, Settings, Users, LogOut, UtensilsCrossed } from 'lucide-react-native'; 
-import { useNavigation, useFocusEffect } from '@react-navigation/native'; // useFocusEffect 추가
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
-import apiClient from '../../common/api/api_client'; // apiClient 임포트 추가
+import apiClient from '../../common/api/api_client';
 
 const { width, height } = Dimensions.get('window');
 
@@ -14,7 +14,6 @@ const FridgeMainScreen = ({ route }) => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets(); 
 
-  // --- [힌트 애니메이션 로직 추가] ---
   const [showHint, setShowHint] = useState(true);
   const translateY = useRef(new Animated.Value(0)).current;
 
@@ -29,7 +28,6 @@ const FridgeMainScreen = ({ route }) => {
     }
   }, [showHint]);
 
-  // --- [데이터 및 실시간 날짜 로직] ---
   const spentAmount = 17;     
   const budgetStartDay = 1;
 
@@ -41,49 +39,59 @@ const FridgeMainScreen = ({ route }) => {
   const [inputFridgeName, setInputFridgeName] = useState("띠끌이네"); 
   const [confirmedFridgeName, setConfirmedFridgeName] = useState("티끌이네"); 
 
-  const recommendedMenu = " AI의 제철음식 추천 받아보기";
+  const recommendedMenu = "AI의 제철음식 추천 받기";
 
-  // [유통기한 임박 재료 상태 관리]
   const [imminentIngredient, setImminentIngredient] = useState({ name: "재료 없음", dDay: "-" });
+  
+  /** * [수정] 하드코딩 제거 및 상태 관리 추가
+   * - topRecommendedRecipe를 상태로 관리하여 API 결과 반영
+   */
+  const [topRecommendedRecipe, setTopRecommendedRecipe] = useState("레시피 조회중...");
 
-  // [실시간 연동 로직]: 화면 포커스 시 가장 임박한 재료 조회
+  /**
+   * [수정] 레시피 추천용 데이터 가공 함수 (Recipe.js와 동일 규격)
+   */
+  const buildInputStock = (inventoryData) => {
+    const stock = {};
+    (inventoryData || []).forEach((item) => {
+      const name = item.item_name || item.name || item.ingredient_name;
+      const quantity = item.quantity ?? item.amount ?? 1;
+      if (name) stock[name] = quantity;
+    });
+    return stock;
+  };
+
+  /**
+   * [실시간 연동 로직]: 화면 포커스 시 인벤토리 및 레시피 1위 동시 조회
+   */
   useFocusEffect(
     useCallback(() => {
-      const fetchImminentIngredient = async () => {
+      const fetchData = async () => {
         try {
           const targetInvenId = route?.params?.invenId || 1;
           const url = apiClient.urls.FRIDGE.GET_INVENTORY(targetInvenId);
-          const data = await apiClient.get(url);
+          const inventoryData = await apiClient.get(url);
           
-          if (data && data.length > 0) {
-            // 1. 유통기한 오름차순 정렬
-            // iOS Date 파싱 오류(NaN)를 방지하기 위해 날짜 문자열 자체로 안전하게 정렬
-            const sortedData = [...data].sort((a, b) => {
+          if (inventoryData && inventoryData.length > 0) {
+            // 1. 유통기한 임박 재료 로직 (기존 로직 보존)
+            const sortedData = [...inventoryData].sort((a, b) => {
               const valA = a.d_days || a.dday || "";
               const valB = b.d_days || b.dday || "";
-              
-              if (typeof valA === 'string' && typeof valB === 'string') {
-                return valA.localeCompare(valB); 
-              }
+              if (typeof valA === 'string' && typeof valB === 'string') return valA.localeCompare(valB); 
               return Number(valA) - Number(valB);
             });
             
-            // 2. 가장 임박한 재료 선택
             const closestItem = sortedData[0];
-            
-            // 3. D-Day 계산
             let dDayText = '';
             let ddayNum = 0;
 
             if (closestItem.dday !== undefined && typeof closestItem.dday === 'number') {
               ddayNum = closestItem.dday;
             } else if (closestItem.d_days) {
-              // iOS JS 엔진 이슈(Invalid Date) 방지를 위해 하이픈(-)을 슬래시(/)로 치환하여 파싱
               const today = new Date();
               today.setHours(0, 0, 0, 0);
               const expiryDate = new Date(String(closestItem.d_days).replace(/-/g, '/'));
               expiryDate.setHours(0, 0, 0, 0);
-              
               const diffTime = expiryDate.getTime() - today.getTime();
               ddayNum = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             }
@@ -92,20 +100,34 @@ const FridgeMainScreen = ({ route }) => {
             else if (ddayNum < 0) dDayText = `D+${Math.abs(ddayNum)}`;
             else dDayText = `D-${ddayNum}`;
 
-            // 4. 상태 업데이트 (서버 데이터 키값 호환성 유지)
             setImminentIngredient({ 
               name: closestItem.ingredient_name || closestItem.name || "알 수 없음", 
               dDay: dDayText 
             });
+
+            // 2. [수정] AI 레시피 1순위 조회 로직 추가
+            const input_stock = buildInputStock(inventoryData);
+            const recipeResult = await apiClient.post(apiClient.urls.FRIDGE.RECOMMEND_RECIPE, {
+              input_stock,
+              top_k: 1, // 홈화면용이므로 1개만 요청하여 최적화
+            });
+
+            if (recipeResult?.recipes && recipeResult.recipes.length > 0) {
+              setTopRecommendedRecipe(recipeResult.recipes[0].recipe_name);
+            } else {
+              setTopRecommendedRecipe("추천 레시피 없음");
+            }
           } else {
             setImminentIngredient({ name: "재료 없음", dDay: "-" });
+            setTopRecommendedRecipe("재료를 추가해주세요");
           }
         } catch (error) {
-          console.error('[FridgeMain] 유통기한 임박 재료 조회 실패:', error);
+          console.error('[FridgeMain] 데이터 통합 조회 실패:', error);
+          setTopRecommendedRecipe("조회 실패");
         }
       };
 
-      fetchImminentIngredient();
+      fetchData();
     }, [route?.params?.invenId]) 
   );
 
@@ -153,8 +175,6 @@ const FridgeMainScreen = ({ route }) => {
   const handleManualAdd = () => {
     navigation.navigate('OCRConfirm', { isManual: true }); 
   };
-
-  const topRecommendedRecipe = "우유 리조또";
 
   return (
     <SafeAreaView style={styles.container}>
@@ -242,7 +262,6 @@ const FridgeMainScreen = ({ route }) => {
           </View>
 
           <View style={styles.row}>
-            {/* 💡 연동된 데이터(imminentIngredient)가 여기에 적용됩니다 */}
             <MenuCard 
               title="냉장고 속 재료" 
               value={imminentIngredient.name} 
