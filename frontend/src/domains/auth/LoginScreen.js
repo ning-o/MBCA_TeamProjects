@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Eye, EyeOff, LogIn } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import BASE_URL, { API_ENDPOINTS } from '../../common/api/config';
 
 export function LoginScreen() {
@@ -46,20 +47,31 @@ export function LoginScreen() {
 
       const response = await fetch(requestUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      await response.json().catch(() => ({}));
+      // 1. 서버 응답 데이터 받기
+      const data = await response.json().catch(() => ({}));
 
       if (response.ok) {
+        // 2. 서버가 준 access_token이 있는지 확인하고 저장
+        if (data.access_token) {
+          // api_client.js에서 정의한 'userToken'이라는 이름으로 저장
+          await AsyncStorage.setItem('userToken', data.access_token);
+          
+          // [추후 마이페이지 업데이트시 사용] 사용자 정보 저장
+          if (data.user_info) {
+            await AsyncStorage.setItem('userInfo', JSON.stringify(data.user_info));
+          }
+        }
+
         Alert.alert('성공', '로그인되었습니다.', [
           { text: '확인', onPress: () => navigation.navigate('Home') }
         ]);
       } else {
-        Alert.alert('로그인 실패', '로그인할 수 없습니다.');
+        // 서버가 보내준 에러 메시지 출력
+        Alert.alert('로그인 실패', data.detail || '아이디 또는 비밀번호를 확인하십시오.');
       }
     } catch (error) {
       console.error('로그인 에러:', error);

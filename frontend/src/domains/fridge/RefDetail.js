@@ -43,8 +43,16 @@ const RefDetail = () => {
     try {
       setLoading(true);
       // 사용자별 인벤토리 식별자 확보 (비로그인 시 Default ID: 1)
-      const storedInvenId = await AsyncStorage.getItem('userInvenId'); 
-      const targetInvenId = storedInvenId || 1;
+      const userInfo = await AsyncStorage.getItem('userInfo');
+      let targetInvenId = 1;
+
+      if (userInfo) {
+        const parsed = JSON.parse(userInfo);
+        // 로그인 시 저장된 inven_id를 사용.
+        targetInvenId = parsed.inven_id || 1; 
+      }
+
+      console.log(`[RefDetail] ${targetInvenId}번 냉장고 데이터 불러오기`);
 
       const url = apiClient.urls.FRIDGE.GET_INVENTORY(targetInvenId);
       const data = await apiClient.get(url);

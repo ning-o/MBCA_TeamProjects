@@ -14,6 +14,7 @@ from app.schemas.auth_schema import (
     UserResponseDTO,
     TokenDTO,
 )
+from app.models.fridge import fridge_models
 
 print("[AUTH FILE LOADED]")
 
@@ -87,8 +88,10 @@ def signup(user_in: UserCreateDTO, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenDTO)
 def login(user_in: UserLoginDTO, db: Session = Depends(get_db)):
+    # 1. 입력 값 전처리
     email = user_in.email.strip().lower()
 
+    # 2. 사용자 존재 여부 및 비밀번호 검증 (기존 로직 유지)
     user = db.query(User).filter(User.email == email).first()
 
     if not user:
@@ -115,10 +118,20 @@ def login(user_in: UserLoginDTO, db: Session = Depends(get_db)):
             detail="비활성화된 계정입니다."
         )
 
+    # 3. 로그인 시각 업데이트 및 DB 반영
     user.login_dt = datetime.now(timezone.utc)
     db.commit()
     db.refresh(user)
 
+    # ---------------------------------------------------------
+    # 유저와 연동된 냉장고(Inventory) ID 조회
+    # Refrigerator 테이블에서 현재 로그인한 user.id를 소유자로 가진 첫 번째 데이터를 가져옴
+    fridge = db.query(fridge_models.Refrigerator).filter(
+        fridge_models.Refrigerator.user_id == user.id
+    ).first()
+    # ---------------------------------------------------------
+
+    # 4. JWT 토큰 생성
     access_token = create_access_token(
         data={
             "sub": str(user.id),
@@ -126,8 +139,21 @@ def login(user_in: UserLoginDTO, db: Session = Depends(get_db)):
         }
     )
 
+    # 5. 최종 응답 반환
+    # user 객체 정보와 함께 조회된 inven_id를 user_info에 실어서 보냄
+    # RefrigeratorResponseDTO 등에 inven_id 필드가 추가되어 있어야 함
+    user_response = UserResponseDTO(
+        id=user.id,
+        email=user.email,
+        nick_name=user.nick_name,
+        provider=user.provider,
+        created_at=user.created_at,
+        login_dt=user.login_dt,
+        inven_id=fridge.inven_id if fridge else None  # 냉장고가 있으면 ID, 없으면 null
+    )
+
     return TokenDTO(
         access_token=access_token,
         token_type="bearer",
-        user_info=user,
+        user_info=user_response,
     )
