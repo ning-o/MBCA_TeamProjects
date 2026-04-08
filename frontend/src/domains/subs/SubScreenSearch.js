@@ -14,6 +14,7 @@ import Footer from '../../common/components/Footer';
 
 import SubsSearchList from './SubsComponents/SubsSearchList';
 import Subsfooter from './SubsComponents/SubsFooter';
+import BASE_URL, { API_ENDPOINTS } from './../../common/api/config';
 
 const { width, height } = Dimensions.get('window');
 
