@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, date
 from typing import List, Dict, Any
+from sqlalchemy import func
 
 from app.core.database import get_db
 from app.models.fridge import fridge_models  # DB 모델
@@ -388,4 +389,30 @@ def get_refrigerator_details(inven_id: int, db: Session = Depends(get_db)):
         
     return fridge
         
-    
+
+
+@router.get("/spending-summary/{inven_id}")
+def get_spending_summary(inven_id: int, db: Session = Depends(get_db)):
+    """
+    [JOIN 방식] 매달 1일 자동으로 0원부터 시작되는 월간 지출 합계 API
+    """
+    today = date.today()
+    first_day_of_month = date(today.year, today.month, 1)
+
+    # 1. 내 냉장고(inven_id)에 현재 들어있는 재료 ID 목록만 중복 없이 추출 (서브쿼리)
+    my_ingredient_ids = db.query(fridge_models.RefIngredients.ingredient_id)\
+        .filter(fridge_models.RefIngredients.inven_id == inven_id)\
+        .distinct().subquery()
+
+    # 2. 위에서 뽑은 ID 목록에 포함되면서 + 이번 달에 구매한 이력만 합산
+    # 이렇게 하면 RefIngredients와 직접 JOIN하지 않기 때문에 수량만큼 배수로 늘어나는 버그가 사라짐ㄴ.
+    total_spent = db.query(func.sum(fridge_models.PhurchaseInfo.after_price))\
+        .filter(
+            fridge_models.PhurchaseInfo.matched_ingredient_id.in_(my_ingredient_ids),
+            fridge_models.PhurchaseInfo.phurchase_date >= first_day_of_month
+        ).scalar() or 0
+
+    return {
+        "total_spent": int(total_spent),
+        "current_month": today.month
+    }

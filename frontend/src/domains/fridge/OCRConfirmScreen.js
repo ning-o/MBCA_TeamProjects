@@ -351,7 +351,7 @@ const OCRConfirmScreen = ({ route }) => {
                             <Text style={styles.itemNameSimple} numberOfLines={1}>
                               {item.rawName || item.matchedName || '(이름 없음)'}
                             </Text>
-                            <Text style={{ fontSize: 13, color: '#3B82F6' }}>
+                            <Text style={{ fontSize: 13, color: '#3B82F6', marginRight: 15 }}>
                               {item.price ? `${item.price}원` : ''} 
                             </Text>
                             <Text style={styles.itemQuantitySimple}>

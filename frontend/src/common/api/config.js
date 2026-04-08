@@ -23,6 +23,7 @@ export const API_ENDPOINTS = {
     GET_INVENTORY: (invenId) => `/api/fridge/inventory/${invenId}`,
     GET_DETAILS: (invenId) => `/api/fridge/details/${invenId}`,
     UPDATE_REFRIGERATOR: (invenId) => `/api/fridge/refrigerator/${invenId}`,
+    GET_SPENDING_SUMMARY: (invenId) => `/api/fridge/spending-summary/${invenId}`,
     OCR: '/api/fridge/ocr',
     SAVE_ITEMS: '/api/fridge/save-items',
     RECOMMEND_RECIPE: '/api/fridge/recommend',

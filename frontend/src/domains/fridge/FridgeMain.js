@@ -47,7 +47,8 @@ const FridgeMainScreen = ({ route }) => {
   getMyId();
 }, []);
 
-  const spentAmount = 17;     
+  // const spentAmount = 17; # 홈 화면 게이지 목데이터    
+  const [spentAmount, setSpentAmount] = useState(0); // 실시간 지출액 상태
   const budgetStartDay = 1;
 
   const [monthlyBudget, setMonthlyBudget] = useState('30');
@@ -112,6 +113,22 @@ const FridgeMainScreen = ({ route }) => {
             setMonthlyBudget(budgetStr);
             setLastValidBudget(budgetStr);
           }
+
+
+          // --- [실시간 지출 금액 추가] ---
+          try {
+            const summaryUrl = apiClient.urls.FRIDGE.GET_SPENDING_SUMMARY(targetInvenId);
+            const summaryData = await apiClient.get(summaryUrl);
+            
+            if (summaryData && summaryData.total_spent !== undefined) {
+              // 원 단위 금액을 만원 단위로 변환하여 게이지 반영
+              setSpentAmount(summaryData.total_spent / 10000);
+            }
+          } catch (summaryErr) {
+            console.error('[FridgeMain] 지출 합계 로드 실패:', summaryErr);
+          }
+          // --- [실시간 지출 금액 추가] ---
+          
 
           // 2. 서버로부터 해당 냉장고의 재료 목록 수신
           const url = apiClient.urls.FRIDGE.GET_INVENTORY(targetInvenId);
@@ -599,9 +616,9 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 12, fontWeight: '600', color: '#64748B' },
   cardContent: { flexDirection: 'row', alignItems: 'center' },
   cardIcon: { fontSize: 18, marginRight: 5 },
-  cardPrefixBlue: { fontSize: 15, color: '#3B82F6', fontWeight: '500' }, 
-  cardValue: { fontSize: 17, fontWeight: 'bold', color: '#1E293B', maxWidth: '80%' },
-  cardUnit: { fontSize: 13, color: '#1E293B', marginLeft: 2, marginTop: 3 },
+  cardPrefixBlue: { fontSize: 15, color: '#3B82F6', fontWeight: '500', marginRight: 10, }, 
+  cardValue: { fontSize: 17, fontWeight: 'bold', color: '#1E293B', maxWidth: '85%' },
+  cardUnit: { fontSize: 13, color: '#1E293B', marginLeft: 6, marginTop: 3 },
   cardSub: { fontSize: 11, color: '#94A3B8', fontWeight: '500' },
   cardInput: { borderBottomWidth: 1, borderBottomColor: '#3B82F6', minWidth: 40, textAlign: 'center' },
   subBtnContainer: {
