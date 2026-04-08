@@ -25,6 +25,7 @@ export const API_ENDPOINTS = {
     SAVE_ITEMS: '/api/fridge/save-items',
     RECOMMEND_RECIPE: '/api/fridge/recommend',
     COMPLETE_COOKING: '/api/fridge/complete-cooking',
+    CREATE_REFRIGERATOR: '/api/fridge/refrigerator'
   },
 //  [구독 관리 도메인]
   SUBS: { // [카테고리 이름]

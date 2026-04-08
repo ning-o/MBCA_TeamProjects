@@ -24,6 +24,7 @@ class UserResponseDTO(BaseModel):
     provider: str = Field(..., description="최초 가입 경로")
     created_at: datetime = Field(..., description="시스템 등록 일시")
     login_dt: Optional[datetime] = Field(None, description="최근 인증 성공 일시")
+    inven_id: Optional[int] = Field(None, description="유저의 활성화된 냉장고 ID")
 
     class Config:
         # SQLAlchemy ORM 객체와의 호환성을 위한 속성 매핑 활성화

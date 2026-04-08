@@ -18,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../../common/components/Header';
 import apiClient from '../../common/api/api_client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /**
  * [Android 전용 설정]
@@ -235,36 +236,51 @@ const OCRConfirmScreen = ({ route }) => {
     setExpandedIndex(items.length);
   };
 
+
   /**
-   * [API 연동 2] handleSave: 확정된 품목 리스트 일괄 저장
-   * - 엔드포인트: apiClient.urls.FRIDGE.SAVE_ITEMS (/api/fridge/save-items)
-   * - 데이터 구조: Array of Objects (JSON 규격)
-   * - 역할: 클라이언트에서 보정한 데이터를 백엔드 유통기한 예측 AI 파이프라인으로 전송함
+   * [영수증 데이터 저장 로직]
+   * - 인식된 식재료 리스트를 현재 로그인한 유저의 냉장고(inven_id)로 전송
    */
   const handleSave = async () => {
     try {
+      // 1. 유효성 검사: 저장할 항목 유무 확인
       if (!items || items.length === 0) {
         Alert.alert('알림', '저장할 항목이 없습니다.');
         return;
       }
 
-      // 서버 DTO 규격에 맞춰 페이로드 구성 (IngredientCreate 스키마 대응)
+      // ---------------------------------------------------------
+      // 하드코딩된 invenId 대신 실제 로그인 정보 사용
+      // ---------------------------------------------------------
+      const userInfo = await AsyncStorage.getItem('userInfo');
+      let myRealInvenId = 1; // 기본값 설정
+
+      if (userInfo) {
+        const parsed = JSON.parse(userInfo);
+        // 로그인 시 서버에서 내려준 진짜 냉장고 ID(inven_id)를 할당
+        if (parsed.inven_id) {
+          myRealInvenId = parsed.inven_id;
+        }
+      }
+      // ---------------------------------------------------------
+
+      // 2. 서버 DTO 규격에 맞춰 페이로드 구성 (IngredientCreate 스키마 대응)
       const payload = items.map((item) => ({
-        inven_id: invenId, 
+        inven_id: myRealInvenId, // 확보된 진짜 냉장고 ID 투입
         ingredient_id: item.id,
-        ingredient_name: item.matchedName,
+        ingredient_name: item.matchedName ? item.matchedName.trim() : "", // 공백 제거 처리 추가
         storage_type: String(item.storageType || "1"), // 기본값 냉장(1) 할당
         quantity: parseInt(item.quantity) || 1, 
         phurchase_date: new Date().toISOString().split('T')[0], // 오늘 날짜 기록
       }));
 
-      console.log('[SAVE] 데이터 전송 시작:', JSON.stringify(payload));
+      console.log(`[SAVE] 데이터 전송 시작 (대상 냉장고 ID: ${myRealInvenId})`);
 
-      // API 호출: apiClient.js에 정의된 기본 'application/json' 헤더가 사용됨
+      // 3. API 호출: apiClient 인터셉터에 의해 Authorization 헤더가 자동 부착됨
       const responseData = await apiClient.post(apiClient.urls.FRIDGE.SAVE_ITEMS, payload);
       console.log('[SAVE] 서버 응답 결과:', responseData);
 
-      // [비즈니스 로직] 저장 결과 상태에 따른 후속 조치
+      // 4. 저장 결과 상태에 따른 후속 조치
       if (responseData.status === "success") {
         Alert.alert(
           '저장 완료',
@@ -272,8 +288,8 @@ const OCRConfirmScreen = ({ route }) => {
           [
             { 
               text: '확인', 
-              // 성공 시 메인 냉장고 화면(Tab 내 FridgeMain)으로 네비게이션 이동
-              onPress: () => navigation.navigate('MainTabs', { screen: 'FridgeMain' }) 
+              // 성공 시 메인 냉장고 화면으로 네비게이션 이동
+              onPress: () => navigation.navigate('FridgeMain', { screen: 'FridgeMain' }) 
             }
           ]
         );
@@ -293,6 +309,7 @@ const OCRConfirmScreen = ({ route }) => {
       }
 
     } catch (error) {
+      // API 통신 및 데이터 파싱 관련 예외 처리
       console.error('[SAVE] 데이터 저장 중 치명적 오류:', error);
       Alert.alert('통신 오류', '서버와 연결할 수 없거나 데이터 규격이 맞지 않습니다.');
     }

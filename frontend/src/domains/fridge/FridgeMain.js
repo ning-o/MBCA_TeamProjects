@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextI
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Soup, Camera, ChevronRight, Settings, Users, LogOut, UtensilsCrossed } from 'lucide-react-native'; 
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
 import apiClient from '../../common/api/api_client';
+import { saveRefrigeratorData } from './FridgeComponents/FridgeRefrigerator';
 
 const { width, height } = Dimensions.get('window');
 
@@ -28,6 +30,23 @@ const FridgeMainScreen = ({ route }) => {
     }
   }, [showHint]);
 
+  useEffect(() => {
+  const getMyId = async () => {
+    try {
+      const userInfo = await AsyncStorage.getItem('userInfo');
+      if (userInfo) {
+        const parsed = JSON.parse(userInfo);
+        if (parsed.inven_id) {
+          setMyInvenId(parsed.inven_id);
+        }
+      }
+    } catch (e) {
+      console.error("ID 로드 실패:", e);
+    }
+  };
+  getMyId();
+}, []);
+
   const spentAmount = 17;     
   const budgetStartDay = 1;
 
@@ -37,7 +56,9 @@ const FridgeMainScreen = ({ route }) => {
 
   const [isManageModalVisible, setIsManageModalVisible] = useState(false);
   const [inputFridgeName, setInputFridgeName] = useState("띠끌이네"); 
-  const [confirmedFridgeName, setConfirmedFridgeName] = useState("티끌이네"); 
+  const [confirmedFridgeName, setConfirmedFridgeName] = useState("티끌이네");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [myInvenId, setMyInvenId] = useState(null);
 
   const recommendedMenu = "AI의 제철음식 추천 받기";
 
@@ -62,21 +83,39 @@ const FridgeMainScreen = ({ route }) => {
   };
 
   /**
-   * [실시간 연동 로직]: 화면 포커스 시 인벤토리 및 레시피 1위 동시 조회
+   * [실시간 연동 로직] 화면 포커스 시 인벤토리 조회 및 냉털 레시피 추천
+   * - route params 또는 AsyncStorage에서 확보한 myInvenId를 기준으로 데이터 로드
    */
   useFocusEffect(
     useCallback(() => {
       const fetchData = async () => {
         try {
-          const targetInvenId = route?.params?.invenId || 1;
+          // 1. 유효한 인벤토리 ID 확인
+          const targetInvenId = route?.params?.invenId || myInvenId;
+
+          // ID 미확보 시 API 호출 중단 (422 에러 방지)
+          if (!targetInvenId) {
+            console.log('[FridgeMain] 인벤토리 ID 대기 중...');
+            return; 
+          }
+
+          console.log(`[FridgeMain] 조회 시작 - ID: ${targetInvenId}`);
+
+          // 2. 서버로부터 해당 냉장고의 재료 목록 수신
           const url = apiClient.urls.FRIDGE.GET_INVENTORY(targetInvenId);
           const inventoryData = await apiClient.get(url);
-          
+
+          console.log(`[FridgeMain] ${targetInvenId}번 냉장고 접속 성공!`);
+
+          // 3. 재료 유무에 따른 분기 처리
           if (inventoryData && inventoryData.length > 0) {
-            // 1. 유통기한 임박 재료 로직 (기존 로직 보존)
+            console.log(`[FridgeMain] 총 ${inventoryData.length}개의 재료 데이터 수신 완료`);
+
+            // 1) 유통기한 기준 오름차순 정렬 (임박 재료 추출)
             const sortedData = [...inventoryData].sort((a, b) => {
               const valA = a.d_days || a.dday || "";
               const valB = b.d_days || b.dday || "";
+              // 문자열 비교와 숫자 비교 예외 처리
               if (typeof valA === 'string' && typeof valB === 'string') return valA.localeCompare(valB); 
               return Number(valA) - Number(valB);
             });
@@ -85,6 +124,7 @@ const FridgeMainScreen = ({ route }) => {
             let dDayText = '';
             let ddayNum = 0;
 
+            // D-Day 계산 로직 수행
             if (closestItem.dday !== undefined && typeof closestItem.dday === 'number') {
               ddayNum = closestItem.dday;
             } else if (closestItem.d_days) {
@@ -96,39 +136,48 @@ const FridgeMainScreen = ({ route }) => {
               ddayNum = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             }
 
+            // D-Day 텍스트 포맷팅
             if (ddayNum === 0) dDayText = 'D-Day';
             else if (ddayNum < 0) dDayText = `D+${Math.abs(ddayNum)}`;
             else dDayText = `D-${ddayNum}`;
 
+            // 최우선 임박 재료 상태 업데이트
             setImminentIngredient({ 
               name: closestItem.ingredient_name || closestItem.name || "알 수 없음", 
               dDay: dDayText 
             });
 
-            // 2. [수정] AI 레시피 1순위 조회 로직 추가
+            // 2) AI 레시피 1순위 추천 요청
+            // 현재 인벤토리 데이터를 AI 엔진 규격에 맞게 파싱
             const input_stock = buildInputStock(inventoryData);
             const recipeResult = await apiClient.post(apiClient.urls.FRIDGE.RECOMMEND_RECIPE, {
               input_stock,
-              top_k: 1, // 홈화면용이므로 1개만 요청하여 최적화
+              top_k: 1, // 홈화면용 최적화 (1개만 요청)
             });
 
+            // 추천 레시피 결과 반영
             if (recipeResult?.recipes && recipeResult.recipes.length > 0) {
               setTopRecommendedRecipe(recipeResult.recipes[0].recipe_name);
             } else {
               setTopRecommendedRecipe("추천 레시피 없음");
             }
+
           } else {
+            // [신규 유저 및 빈 냉장고 대응] 재료 데이터가 없을 경우 초기값 설정
+            console.log('[FridgeMain] 현재 냉장고가 비어있음 (Inventory Empty)');
             setImminentIngredient({ name: "재료 없음", dDay: "-" });
             setTopRecommendedRecipe("재료를 추가해주세요");
           }
+
         } catch (error) {
-          console.error('[FridgeMain] 데이터 통합 조회 실패:', error);
+          // API 통신 및 로직 에러 핸들링
+          console.error('[FridgeMain] 데이터 통합 조회 중 예외 발생:', error);
           setTopRecommendedRecipe("조회 실패");
         }
       };
 
       fetchData();
-    }, [route?.params?.invenId]) 
+    }, [route?.params?.invenId, myInvenId]) // 종속성 배열에 ID 추가하여 변경 시 자동 재조회
   );
 
   const handleBudgetBlur = () => {
@@ -139,10 +188,24 @@ const FridgeMainScreen = ({ route }) => {
     }
   };
 
-  const handleSaveSettings = () => {
-    setConfirmedFridgeName(inputFridgeName);
-    setIsManageModalVisible(false);
+  const handleSaveSettings = async () => {
+    try {
+    setIsSubmitting(true)
+
+    const response = await saveRefrigeratorData(inputFridgeName, monthlyBudget);
+
+    if (response) {
+      setConfirmedFridgeName(inputFridgeName);
+      setLastValidBudget(monthlyBudget);
+      Alert.alert('성공', '냉장고 정보가 저장되었습니다.');
+      setIsManageModalVisible(false);
+    }
+  } catch (error) {
+    console.error('[냉장고 저장 에러]:', error);
+  } finally {
+    setIsSubmitting(false);
     Keyboard.dismiss();
+  }
   };
 
   const handleOpenManageModal = () => {

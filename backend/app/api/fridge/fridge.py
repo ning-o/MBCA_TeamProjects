@@ -11,6 +11,7 @@ from app.schemas import fridge_schema        # 스키마
 from app.schemas.fridge_schema import IngredientCreate, IngredientResponse
 from app.ml.fridge.expiry_logic import tikkle_oracle  # 유통기한 예측 모델
 from app.models.common import TotalSaving # common.py에 정의된 집계 모델
+from app.core.auth import get_current_user_id
 
 router = APIRouter()
 
@@ -291,5 +292,38 @@ def complete_cooking(data: fridge_schema.CompleteCookingRequest, db: Session = D
         db.rollback()
         print(f"DB 저장 실패: {str(e)}")
         raise HTTPException(status_code=500, detail=f"데이터 저장 실패: {str(e)}")
+    
+    
+@router.post("/refrigerator", response_model=fridge_schema.RefrigeratorResponse)
+def create_refrigerator(
+    data: fridge_schema.RefrigeratorBase, 
+    db: Session = Depends(get_db),
+    user_id: int = Depends(get_current_user_id) # 토큰에서 ID 추출
+):
+    """
+    로그인한 유저의 정보로 냉장고를 생성합니다.
+    """
+    # 중복 체크 로직
+    existing = db.query(fridge_models.Refrigerator).filter(
+        fridge_models.Refrigerator.user_id == user_id
+    ).first()
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="이미 냉장고가 존재합니다.")
+
+    # 실제 데이터 저장
+    new_fridge = fridge_models.Refrigerator(
+        inven_nickname=data.inven_nickname,
+        mounth_food_exp=data.mounth_food_exp,
+        user_id=user_id, # 추출된 ID
+        current_spent=0,
+        total_savings=0
+    )
+
+    db.add(new_fridge)
+    db.commit()
+    db.refresh(new_fridge)
+
+    return new_fridge
         
     
