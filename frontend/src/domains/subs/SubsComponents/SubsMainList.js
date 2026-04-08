@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
   StyleSheet, 
@@ -6,10 +6,14 @@ import {
   Text, 
   View,   
   Image,
+  ActivityIndicator,
+  Alert 
 } from 'react-native';
 
 import LOGO_IMAGES from './../SubsImageURL';
 import SubsChange from './SubsChange';
+import apiClient from '../../../common/api/api_client';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 
 const SubsMainList = ( { subs , fetchUserSubs } )=>{
@@ -39,12 +43,51 @@ const SubsMainList = ( { subs , fetchUserSubs } )=>{
 
     const [isChanging, setIsChanging] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null); // 데이터 전달용 변수
-
+    const [myInvenId, setMyInvenId] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [matchedPackage, setMatchedPackage] = useState(null);
     // 변경하기 버튼 클릭시
     const handleEditPress = (item) => {
       setSelectedItem(item); // 클릭한 행의 데이터 저장
       setIsChanging(true);   // 화면 전환
     };
+
+    // 2. 본인 로직: 화면 진입 시 ID 로드
+    useEffect(() => {
+        const getMyId = async () => {
+            try {
+                const userInfo = await AsyncStorage.getItem('userInfo');
+                if (userInfo) {
+                    const parsed = JSON.parse(userInfo);
+                    // parsed.id 또는 parsed.inven_id 중 실제 키값 확인 필요
+                    const id = parsed.id || parsed.inven_id;
+                    if (id) setMyInvenId(id);
+                }
+            } catch (e) {
+                console.error("ID 로드 실패:", e);
+            }
+        };
+        getMyId();
+    }, []);
+
+    // 3. 본인 로직: 추천 패키지 API 호출
+    useEffect(() => {
+        const fetchMatchedPackage = async () => {
+            if (!myInvenId) return;
+            
+            try {
+                const response = await apiClient.get(`/api/subs/matched-packages/${myInvenId}`);
+                if (response && response.status === "success" && response.data?.length > 0) {
+                    setMatchedPackage(response.data[0]);
+                }
+            } catch (error) {
+                console.error("추천 데이터 로드 실패:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchMatchedPackage();
+    }, [myInvenId]);
 
     return (
     <SafeAreaView style={styles.safeArea}>
@@ -61,12 +104,41 @@ const SubsMainList = ( { subs , fetchUserSubs } )=>{
         {!isChanging ? (
         <>
           <View style={styles.container}>
-              <View style={styles.containertop}>
-                  <Text>구독 서비스 변경 추천</Text>
-                  <TouchableOpacity style={styles.containerSearchButton} onPress={() => console.log('a')}>
-                      <Text style={styles.buttonText}>찾아보기</Text>
-                  </TouchableOpacity>
-              </View>            
+            <View style={styles.containertop}>
+                <Text>구독 서비스 변경 추천</Text>
+                <TouchableOpacity 
+                    style={styles.containerSearchButton} 
+                    onPress={() => {
+                        if (matchedPackage) handleEditPress(matchedPackage);
+                        else Alert.alert("알림", "추천 패키지가 없습니다.");
+                    }}
+                >
+                    <Text style={styles.buttonText}>찾아보기</Text>
+                </TouchableOpacity>
+            </View>
+            
+            <View style={{ paddingHorizontal: 10, paddingBottom: 10 }}>
+                {isLoading ? (
+                    <ActivityIndicator size="small" color="#007AFF" />
+                ) : matchedPackage ? (
+                    <TouchableOpacity 
+                        style={styles.recommendCard}
+                        onPress={() => handleEditPress(matchedPackage)}
+                    >
+                        <Text style={styles.recommendTitle}>🎁 {matchedPackage.master_name}</Text>
+                        <Text style={styles.recommendMsg}>
+                            {matchedPackage.combined_services.join(' + ')} 결합 시
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Text style={styles.oldPrice}>{matchedPackage.comb_amt?.toLocaleString()}원</Text>
+                            <Text style={styles.newPrice}> → {matchedPackage.master_amt?.toLocaleString()}원</Text>
+                            <Text style={styles.saveTag}> (절약 가능!)</Text>
+                        </View>
+                    </TouchableOpacity>
+                ) : (
+                    <Text style={{ color: '#999', fontSize: 12 }}>현재 추천 상품이 없습니다.</Text>
+                )}
+            </View>
           </View>
 
           <View style={styles.bottom}>
@@ -179,7 +251,42 @@ const styles = StyleSheet.create({
   ChangeContainer: {
     flex: 1,     
     backgroundColor: '#fff',
+},
+
+  recommendCard: {
+    margin: 10,
+    padding: 15,
+    backgroundColor: '#E3F2FD', // 연한 파란색 배경
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#90CAF9',
   },
+  recommendTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1565C0',
+  },
+  recommendMsg: {
+    fontSize: 13,
+    color: '#555',
+    marginVertical: 4,
+  },
+  oldPrice: {
+    textDecorationLine: 'line-through',
+    color: '#888',
+  },
+  newPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#D32F2F',
+    marginLeft: 5,
+  },
+  saveTag: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+  }
+
 
 })
 
