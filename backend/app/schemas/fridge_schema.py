@@ -23,6 +23,7 @@ class IngredientCreate(BaseModel):
     storage_type: str                    # 저장 방식 (1:냉장, 2:냉동, 3:실온)
     quantity: int                        # 수량
     phurchase_date: date                 # 구매일 (모델 오타 유지: phurchase)
+    after_price: int = 0
 
 class IngredientResponse(BaseModel):
     ref_no: int                          # 냉장고 내 품목 고유번호

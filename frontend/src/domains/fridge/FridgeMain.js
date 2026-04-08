@@ -101,6 +101,18 @@ const FridgeMainScreen = ({ route }) => {
 
           console.log(`[FridgeMain] 조회 시작 - ID: ${targetInvenId}`);
 
+          const detailsUrl = apiClient.urls.FRIDGE.GET_DETAILS(targetInvenId); 
+          const details = await apiClient.get(detailsUrl);
+
+          if (details) {
+            setConfirmedFridgeName(details.inven_nickname || "티끌이네");
+            setInputFridgeName(details.inven_nickname || "티끌이네");
+            
+            const budgetStr = String(details.mounth_food_exp ?? '30'); 
+            setMonthlyBudget(budgetStr);
+            setLastValidBudget(budgetStr);
+          }
+
           // 2. 서버로부터 해당 냉장고의 재료 목록 수신
           const url = apiClient.urls.FRIDGE.GET_INVENTORY(targetInvenId);
           const inventoryData = await apiClient.get(url);
@@ -190,23 +202,33 @@ const FridgeMainScreen = ({ route }) => {
 
   const handleSaveSettings = async () => {
     try {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
-    const response = await saveRefrigeratorData(inputFridgeName, monthlyBudget);
+    // 현재 상태값인 myInvenId를 전달
+    const response = await saveRefrigeratorData(
+      inputFridgeName, 
+      monthlyBudget, 
+      myInvenId // 이 값이 누락되면 신규 생성으로 인식
+    );
 
     if (response) {
       setConfirmedFridgeName(inputFridgeName);
       setLastValidBudget(monthlyBudget);
-      Alert.alert('성공', '냉장고 정보가 저장되었습니다.');
+      Alert.alert('성공', '냉장고 정보가 수정되었습니다.');
       setIsManageModalVisible(false);
     }
   } catch (error) {
-    console.error('[냉장고 저장 에러]:', error);
+    const errorDetail = error.response?.data?.detail || '알 수 없는 오류가 발생했습니다.';
+      console.error(`[SAVE_ERROR] ${errorDetail}`);
+      
+      Alert.alert(
+        '저장 실패', 
+        `서버 통신 중 문제가 발생했습니다.\n(사유: ${errorDetail})`
+      );
   } finally {
     setIsSubmitting(false);
-    Keyboard.dismiss();
   }
-  };
+};
 
   const handleOpenManageModal = () => {
     if (showHint) setShowHint(false); 
