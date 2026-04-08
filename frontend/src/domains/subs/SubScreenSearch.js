@@ -1,24 +1,21 @@
 import React, { useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { 
-  StyleSheet, 
-  View,   
+import {
+  StyleSheet,
+  View,
   ScrollView,
-  Dimensions 
+  Dimensions
 } from 'react-native';
 
-// 공용 헤더 & 푸터 불러오기
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
-
 import SubsSearchList from './SubsComponents/SubsSearchList';
 import Subsfooter from './SubsComponents/SubsFooter';
 import BASE_URL, { API_ENDPOINTS } from './../../common/api/config';
 
-const { width, height } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
-// 사용자 구독 정보 데이터 불러오기
 export const getUserSubs = async (userId) => {
   const res = await axios.get(
     `${BASE_URL}${API_ENDPOINTS.SUBS.GET_USER_SUBS(userId)}`
@@ -26,7 +23,6 @@ export const getUserSubs = async (userId) => {
   return res.data;
 };
 
-// 구독 카테고리 종류 데이터 불러오기
 export const fetchUserSubscriptions = async () => {
   const res = await axios.get(
     `${BASE_URL}${API_ENDPOINTS.SUBS.GET_CATEGORIES}`
@@ -34,14 +30,33 @@ export const fetchUserSubscriptions = async () => {
   return res.data;
 };
 
+const fetchMyProfile = async () => {
+  try {
+    const jsonValue = await AsyncStorage.getItem('userInfo');
+    const userInfo = jsonValue != null ? JSON.parse(jsonValue) : null;
+    return userInfo?.id || null;
+  } catch (error) {
+    console.error('프로필 로드 실패:', error);
+    return null;
+  }
+};
+
 export default function SubScreenSearch() {
   const [subs, setSubs] = useState([]);
   const [category, setCategory] = useState([]);
+  const [userId, setUserId] = useState(null);
 
-  const userId = 1; // 임시
-
-  // 시작시 사용자 구독 정보 가져오기
   useEffect(() => {
+    const init = async () => {
+      const id = await fetchMyProfile();
+      if (id) setUserId(id);
+    };
+    init();
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+
     const fetchSubs = async () => {
       try {
         const data = await getUserSubs(userId);
@@ -57,48 +72,40 @@ export default function SubScreenSearch() {
     fetchSubs();
   }, [userId]);
 
-
-  return (    
+  return (
     <View style={styles.container}>
-      {/* [고정] 공용 헤더 사용 */}
-      <Header/>
+      <Header />
       <View style={styles.mainbox}>
-        
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>    
-          <SubsSearchList subs={subs} category={category} />
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <SubsSearchList subs={subs} category={category} userId={userId} setSubs={setSubs} />
         </ScrollView>
 
         <Subsfooter subs={subs} />
-        
       </View>
-      {/* [고정] 공용 푸터 사용 */}
       <Footer />
-    </View>    
-    
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#afd5fa', // 아이폰 스타일의 연한 회색 배경    
-    justifyContent: 'center', // 자식(mainbox)을 세로 중앙으로
-    alignItems: 'center',     // 자식(mainbox)을 가로 중앙으로
-
+    backgroundColor: '#afd5fa',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-
   mainbox: {
     width: '100%',
-    height:height - 15,    
-    backgroundColor: '#f8f9fa', // 아이폰 스타일의 연한 회색 배경    
+    height: height - 15,
+    backgroundColor: '#f8f9fa',
     borderWidth: 1,
-
   },
-
-  scrollContent: {    
-    paddingTop: 55,    
-    paddingBottom:100,
+  scrollContent: {
+    paddingTop: 55,
+    paddingBottom: 100,
     minHeight: '100%',
   },
-  
 });
