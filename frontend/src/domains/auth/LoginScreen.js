@@ -1,46 +1,83 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  StyleSheet, 
-  KeyboardAvoidingView, 
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  KeyboardAvoidingView,
   Platform,
-  Alert 
+  Alert
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { Eye, EyeOff, LogIn } from 'lucide-react-native'; // Native용 아이콘 사용
+import { Eye, EyeOff, LogIn } from 'lucide-react-native';
+import BASE_URL, { API_ENDPOINTS } from '../../common/api/config';
 
 export function LoginScreen() {
   const navigation = useNavigation();
-  
-  const [userId, setUserId] = useState('');
+
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
-    if (!userId || !password) {
-      Alert.alert('알림', '아이디와 비밀번호를 입력해주세요.');
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('알림', '어이디와 비밀번호를 모두 입력해주세요.');
       return;
     }
-    console.log('로그인 시도:', { userId, password });
-    goToHome();
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      Alert.alert('로그인 실패' ,'회원가입 후 이용 해주세요.');
+      return;
+    }
+
+    const requestUrl = `${BASE_URL}${API_ENDPOINTS.AUTH.LOGIN}`;
+    const payload = {
+      email: email.trim(),
+      password: password.trim(),
+    };
+
+    try {
+      setIsSubmitting(true);
+
+      const response = await fetch(requestUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        Alert.alert('성공', '로그인되었습니다.', [
+          { text: '확인', onPress: () => navigation.navigate('Home') }
+        ]);
+      } else {
+        Alert.alert('로그인 실패', '로그인할 수 없습니다.');
+      }
+    } catch (error) {
+      console.error('로그인 에러:', error);
+      Alert.alert('네트워크 오류', '서버에 연결할 수 없습니다.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleKakaoLogin = () => console.log('카카오 로그인');
-  const handleNaverLogin = () => console.log('네이버 로그인');
   const goToSignup = () => navigation.navigate('SignUp');
-  const goToHome = () => navigation.navigate('Home'); // Stack Navigator의 name과 일치해야 함
 
   return (
     <View style={styles.container}>
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.inner}
       >
         <View style={styles.card}>
-          {/* 로고 영역 */}
           <View style={styles.header}>
             <View style={styles.logoCircle}>
               <LogIn size={32} color="white" />
@@ -49,16 +86,16 @@ export function LoginScreen() {
             <Text style={styles.subtitle}>다시 만나서 반갑습니다!</Text>
           </View>
 
-          {/* 입력 폼 */}
           <View style={styles.form}>
-            <Text style={styles.label}>아이디</Text>
+            <Text style={styles.label}>이메일</Text>
             <TextInput
               style={styles.input}
-              value={userId}
-              onChangeText={setUserId}
-              placeholder="아이디를 입력하세요"
+              value={email}
+              onChangeText={setEmail}
+              placeholder="이메일을 입력하세요"
               placeholderTextColor="#A98BB5"
               autoCapitalize="none"
+              keyboardType="email-address"
             />
 
             <Text style={[styles.label, { marginTop: 15 }]}>비밀번호</Text>
@@ -70,12 +107,15 @@ export function LoginScreen() {
                 secureTextEntry={!showPassword}
                 placeholder="비밀번호를 입력하세요"
                 placeholderTextColor="#A98BB5"
+                autoCapitalize="none"
               />
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
                 style={styles.eyeIcon}
               >
-                {showPassword ? <EyeOff size={20} color="#B8A3C9" /> : <Eye size={20} color="#B8A3C9" />}
+                {showPassword
+                  ? <EyeOff size={20} color="#B8A3C9" />
+                  : <Eye size={20} color="#B8A3C9" />}
               </TouchableOpacity>
             </View>
 
@@ -83,32 +123,16 @@ export function LoginScreen() {
               <Text style={styles.findText}>아이디 · 비밀번호 찾기</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleSubmit}>
-              <Text style={styles.loginButtonText}>로그인</Text>
+            <TouchableOpacity
+              style={[styles.loginButton, isSubmitting && styles.disabledButton]}
+              onPress={handleSubmit}
+              disabled={isSubmitting}
+            >
+              <Text style={styles.loginButtonText}>
+                {isSubmitting ? '로그인 중...' : '로그인'}
+              </Text>
             </TouchableOpacity>
           </View>
-
-          {/* <View style={styles.dividerContainer}>
-            <View style={styles.line} />
-            <Text style={styles.dividerText}>또는</Text>
-            <View style={styles.line} />
-          </View>
-
-          <View style={styles.socialButtons}>
-            <TouchableOpacity 
-              style={[styles.socialButton, { backgroundColor: '#FEE500' }]} 
-              onPress={handleKakaoLogin}
-            >
-              <Text style={[styles.socialText, { color: '#3C1E1E' }]}>카카오로 로그인</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={[styles.socialButton, { backgroundColor: '#03C75A' }]} 
-              onPress={handleNaverLogin}
-            >
-              <Text style={[styles.socialText, { color: 'white' }]}>네이버로 로그인</Text>
-            </TouchableOpacity>
-          </View> */}
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>아직 회원이 아니신가요? </Text>
@@ -170,18 +194,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loginButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
-  dividerContainer: { flexDirection: 'row', alignItems: 'center', marginVertical: 25 },
-  line: { flex: 1, height: 1, backgroundColor: '#E5D4ED' },
-  dividerText: { marginHorizontal: 10, color: '#A98BB5', fontSize: 13 },
-  socialButtons: { gap: 12 },
-  socialButton: {
-    height: 50,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+  disabledButton: {
+    backgroundColor: '#D4C4DD',
   },
-  socialText: { fontSize: 15, fontWeight: 'bold' },
+  loginButtonText: { color: 'white', fontSize: 16, fontWeight: 'bold' },
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 25 },
   footerText: { color: '#A98BB5' },
   signupText: { color: '#8B6F9C', fontWeight: 'bold', textDecorationLine: 'underline' },
