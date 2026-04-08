@@ -18,7 +18,7 @@ const LOGO_IMAGES = {
   '요기요': require('./logo/yogiyo.png'),
 
   '네이버': require('./logo/naver.png'),
-  '컬리': require('./logo/kurly.png'),
+  '컬리': require('./logo/kurly.jpg'),
 
   '챗지피티': require('./logo/chatgpt.jpg'),
   '제미나이': require('./logo/gemini.png'),

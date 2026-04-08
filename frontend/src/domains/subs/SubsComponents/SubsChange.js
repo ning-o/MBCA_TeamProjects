@@ -6,14 +6,15 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 
 import axios from 'axios';
 import LOGO_IMAGES from './../SubsImageURL';
 import SubsChangeList from './SubsChangeList';
-import BASE_URL, { API_ENDPOINTS } from './config';
+import BASE_URL, { API_ENDPOINTS } from './../../../common/api/config';
 
-const SubsChange = ({ data, onBack }) => {
+const SubsChange = ({ data, userid, onBack, onRefresh }) => {
   const [isChanging, setIsChanging] = useState(false);
   const [priceData, setPriceData] = useState({});
   const [loading, setLoading] = useState(false);
@@ -21,8 +22,8 @@ const SubsChange = ({ data, onBack }) => {
 
   const [selectedService, setSelectedService] = useState({
     name: data.name,
-    logo: data.logo,
-    price: data.price,
+    logo: data.logo_img,
+    price: data.base_price,
   });
 
   const [selectedPlanId, setSelectedPlanId] = useState(null);
@@ -73,8 +74,17 @@ const SubsChange = ({ data, onBack }) => {
         `${BASE_URL}${API_ENDPOINTS.SUBS.GET_DETAIL(subsId)}`
       );
       
+      // detail json 타입으로 변경
+      const parsed = {
+        ...res.data,
+        detail:
+          typeof res.data.detail === 'string'
+            ? JSON.parse(res.data.detail)
+            : res.data.detail,
+      };
+
       // SELECT * 결과 전체 저장
-      setSelectedDetail(res.data);
+      setSelectedDetail(parsed);
     } catch (error) {
       console.log('상세 조회 실패:', error);
       setSelectedDetail(null);
@@ -106,10 +116,16 @@ const SubsChange = ({ data, onBack }) => {
     try {
         if (!selectedPlanId) return;
 
-        await axios.post(
-            config.SUBS.UPDATE_USER_SUB(data.user_id, selectedPlanId, data.id)
+        await axios.post(                        
+            `${BASE_URL}${API_ENDPOINTS.SUBS.UPDATE_USER_SUB(userid, selectedPlanId, data.id)}`
         );
-        
+
+        // 최신화
+        if (onRefresh) {
+          await onRefresh();
+        }
+        onBack();
+
     } catch (error) {
         console.log('요금제 변경 실패:', error);
         }
@@ -130,7 +146,10 @@ const SubsChange = ({ data, onBack }) => {
     setSelectedDetail(null);
   };
 
-  const currentPriceInfo = priceData[selectedService.logo] || [];
+  
+
+  const currentPriceInfo = (priceData[selectedService.logo] || [])
+  .sort((a, b) => a.price - b.price);
 
   return (
     <View style={styles.container}>
@@ -141,17 +160,16 @@ const SubsChange = ({ data, onBack }) => {
       >
         <View style={styles.header}>
           <Text style={{ marginRight: 10 }}>{data.category}</Text>
-          <Image source={LOGO_IMAGES[data.logo]} style={[styles.imageLogo, { marginRight: 20 }]}/>
+          <Image source={LOGO_IMAGES[data.logo_img]} style={[styles.imageLogo, { marginRight: 20 }]}/>
           <Text style={{ marginRight: 10 }}>{data.name}</Text>
           <Text style={{ marginLeft: 'auto' }}>
-            {Number(data.price).toLocaleString()}원
+            {Number(data.base_price).toLocaleString()}원
           </Text>
           <View style={styles.headerButtonbox}>
             <TouchableOpacity
               style={[styles.headerButton, isChanging && { opacity: 0.5 }]}
               onPress={() => {
-                handlechangePrice();
-                onBack();
+                handlechangePrice();                
               }}
               disabled={isChanging}
             >
@@ -196,7 +214,7 @@ const SubsChange = ({ data, onBack }) => {
                     ]}
                     onPress={() => handlePriceSelect(plan)}
                   >
-                    <Text>{Number(plan.price).toLocaleString()}원</Text>
+                    <Text style={{'fontSize':10}}>{Number(plan.price).toLocaleString()}</Text>
                   </TouchableOpacity>
                 ))
               ) : (
@@ -206,6 +224,7 @@ const SubsChange = ({ data, onBack }) => {
               )}
             </View>
 
+            {/* 상세 설명 - detail 출력 */}
             <View style={styles.bottompricedetail}>
               {detailLoading ? (
                 <View style={styles.detailCenter}>
@@ -217,13 +236,33 @@ const SubsChange = ({ data, onBack }) => {
                   <Text style={styles.detailTitle}>
                     선택 가격 - {Number(selectedPrice).toLocaleString()}원
                   </Text>
+                  <Text style={styles.detailTitle}>{selectedDetail?.name}</Text>
                   {selectedDetail ? (
-                    <Text style={styles.detailText}>
-                      {JSON.stringify(selectedDetail, null, 2)}
-                    </Text>
-                  ) : (
-                    <Text style={styles.detailText}>상세 정보 없음</Text>
-                  )}
+                    <View>
+                      {/* title */}
+                      {selectedDetail.detail?.title && (
+                        <Text style={styles.detailText}>
+                          {selectedDetail.detail.title}
+                        </Text>
+                      )}
+
+                      {/* features */}
+                      {selectedDetail.detail.features?.map((item, i) => (
+                        <Text key={i} style={styles.detailText}>
+                          {item.device} : {item.unlimited_listening ?? item.MP3_download ? 'O' : 'X'}
+                        </Text>
+                      ))}
+
+                      {/* content */}
+                      {selectedDetail.detail?.content?.map((text, i) => (
+                        <Text key={`c-${i}`} style={styles.detailText}>
+                          {text}
+                        </Text>
+                      ))}
+                    </View>
+                    ) : (
+                    <Text>상세 정보 없음</Text>
+                )}
                 </ScrollView>
               ) : (
                 <View style={styles.detailCenter}>

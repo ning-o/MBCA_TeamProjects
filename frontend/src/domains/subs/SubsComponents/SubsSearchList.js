@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+ import React, { useState } from 'react';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   TouchableOpacity,
   Text,
   View,
   Image,
+  StyleSheet,
 } from 'react-native';
 import axios from 'axios';
 
 import CustomAddModal from './CustomAddSubs';
 import LOGO_IMAGES from './../SubsImageURL';
-import BASE_URL, { API_ENDPOINTS } from './config';
+import BASE_URL, { API_ENDPOINTS } from './../../../common/api/config';
 
-const SubsSearchList = ({ subs, category, styles }) => {
+const SubsSearchList = ({ subs, category }) => {
   const [categorySubs, setCategorySubs] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedsubscribe, setSelectedsubscribe] = useState(null);
@@ -34,7 +36,8 @@ const SubsSearchList = ({ subs, category, styles }) => {
 
   const subscribeData = categorySubs.filter(
     (item) => item.logo_img === selectedsubscribe
-  );
+  )
+  .sort((a, b) => a.base_price - b.base_price);
 
   const handleCategorySelect = async (categoryName) => {
     if (selectedCategory === categoryName) {
@@ -53,7 +56,7 @@ const SubsSearchList = ({ subs, category, styles }) => {
       setSelectedDetail(null);
 
       const response = await axios.get(
-        `${BASE_URL}${API_ENDPOINTS.GET_BY_CATEGORY(categoryName)}`
+        `${BASE_URL}${API_ENDPOINTS.SUBS.GET_BY_CATEGORY(categoryName)}`        
       );
 
       setCategorySubs(response.data);
@@ -77,20 +80,29 @@ const SubsSearchList = ({ subs, category, styles }) => {
   };
 
   const handlepriceSelect = async (subsId, price) => {
-    if (selectedprice === price) {
+    if (selectedprice === subsId) {
       setSelectedprice(null);
       setSelectedDetail(null);
       return;
     }
 
     try {
-      setSelectedprice(price);
+      setSelectedprice(subsId);
 
       const response = await axios.get(
-        `${BASE_URL}${API_ENDPOINTS.GET_DETAIL(subsId)}`
+        `${BASE_URL}${API_ENDPOINTS.SUBS.GET_DETAIL(subsId)}`
       );
 
-      setSelectedDetail(response.data);
+      // detail json 타입으로 변경
+      const parsed = {
+        ...response.data,
+        detail:
+          typeof response.data.detail === 'string'
+            ? JSON.parse(response.data.detail)
+            : response.data.detail,
+      };
+
+      setSelectedDetail(parsed);
     } catch (error) {
       console.error('요금제 상세 조회 실패:', error);
       setSelectedDetail(null);
@@ -107,8 +119,8 @@ const SubsSearchList = ({ subs, category, styles }) => {
         <Text style={{ height: 24, borderBottomWidth: 1 }}>내 구독 서비스</Text>
         <View style={styles.headerList}>
           <View style={styles.headerbox}>
-            {getLogo(subs).map((item) => (
-              <View key={item.id} style={styles.headerboxlist}>
+            {getLogo(subs).map((item, index) => (
+              <View key={`${item.logo_img}-${index}`} style={styles.headerboxlist}>
                 <Image
                   source={LOGO_IMAGES[item.logo]}
                   style={styles.imageLogo}
@@ -121,13 +133,10 @@ const SubsSearchList = ({ subs, category, styles }) => {
 
       <View style={styles.container}>
         <View style={styles.categoryList}>
-          {category.map((item) => (
+          {category.map((item, index) => (
             <TouchableOpacity
-              key={item}
-              style={[
-                styles.categorybox,
-                selectedCategory === item && { backgroundColor: '#aaa' },
-              ]}
+              key={`${item}-${index}`}
+              style={[styles.categorybox, selectedCategory === item && { backgroundColor: '#aaa' },]}
               onPress={() => handleCategorySelect(item)}
             >
               <Text>{item}</Text>
@@ -152,13 +161,10 @@ const SubsSearchList = ({ subs, category, styles }) => {
       {selectedCategory && (
         <View style={styles.bottom}>
           <View style={styles.bottomcategoryList}>
-            {logoList.map((item) => (
+            {logoList.map((item, index) => (
               <TouchableOpacity
-                key={item.logo_img}
-                style={[
-                  styles.bottomcategorybox,
-                  selectedsubscribe === item.logo_img && { backgroundColor: '#aaa' },
-                ]}
+                key={`${item.logo_img}-${index}`}
+                style={[styles.bottomcategorybox,selectedsubscribe === item.logo_img && { backgroundColor: '#aaa' },]}
                 onPress={() => handlelogoSelect(item.logo_img)}
               >
                 <Image
@@ -184,13 +190,10 @@ const SubsSearchList = ({ subs, category, styles }) => {
                   />
                 </View>
 
-                {subscribeData.map((item) => (
+                {subscribeData.map((item, index) => (
                   <TouchableOpacity
-                    key={item.id}
-                    style={[
-                      styles.bottompricebox,
-                      selectedprice === item.base_price && { backgroundColor: '#aaa' },
-                    ]}
+                    key={`${item.id}-${index}`}
+                    style={[styles.bottompricebox, selectedprice === item.id && { backgroundColor: '#aaa' },]}
                     onPress={() => handlepriceSelect(item.id, item.base_price)}
                   >
                     <Text>{item.base_price}</Text>
@@ -202,11 +205,31 @@ const SubsSearchList = ({ subs, category, styles }) => {
                 {selectedDetail && (
                   <View>
                     <Text>{selectedDetail.name}</Text>
-                    <Text>선택 가격 - {Number(selectedDetail.base_price).toLocaleString()}원</Text>                    
+                    <Text>선택 가격 - {Number(selectedDetail.base_price).toLocaleString()}원</Text>
+                    <Text></Text>
                     {selectedDetail ? (
-                        <Text style={styles.detailText}>
-                            {JSON.stringify(selectedDetail.detail, null, 2)}
-                        </Text>
+                        <View>
+                          {/* title */}
+                          {selectedDetail.detail?.title && (
+                            <Text style={styles.detailText}>
+                              {selectedDetail.detail.title}
+                            </Text>
+                          )}
+
+                          {/* features */}
+                          {selectedDetail.detail.features?.map((item, i) => (
+                            <Text key={i} style={styles.detailText}>
+                              {item.device} : {item.unlimited_listening ?? item.MP3_download ? 'O' : 'X'}
+                            </Text>
+                          ))}
+
+                          {/* content */}
+                          {selectedDetail.detail?.content?.map((text, i) => (
+                            <Text key={`c-${i}`} style={styles.detailText}>
+                              {text}
+                            </Text>
+                          ))}
+                        </View>
                         ) : (
                         <Text>상세 정보 없음</Text>
                     )}

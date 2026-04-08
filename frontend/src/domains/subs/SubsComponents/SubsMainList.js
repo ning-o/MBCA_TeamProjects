@@ -10,15 +10,16 @@ import {
 
 import LOGO_IMAGES from './../SubsImageURL';
 import SubsChange from './SubsChange';
+import axios from 'axios';
 
-const SubsMainList = ( { subs } )=>{
+const SubsMainList = ( { subs , fetchUserSubs } )=>{
     
     // 사용자가 구독한 구독 로고 이미지 - list형식으로 변환
     const getLogo = (subs) => {
       if (!subs || subs.length === 0) return [];
 
       return subs.map(item => ({
-        id: item.id,          // user_sub_id
+        id: item.master_id,          // user_sub_id
         logo: item.logo_img   // 로고
       }));      
     };
@@ -28,7 +29,7 @@ const SubsMainList = ( { subs } )=>{
       if (!subs || subs.length === 0) return [];
 
       return subs.map(item => ({
-        id: item.id,
+        id: item.master_id,
         name: item.name,
         logo_img: item.logo_img,
         base_price: Number(item.base_price),
@@ -50,8 +51,8 @@ const SubsMainList = ( { subs } )=>{
         <View style={styles.header}>
             <Text style={{borderBottomWidth:1}}>내 구독 리스트</Text>
             <View style={styles.headerbox}>
-                {getLogo(subs).map((item) => (
-                  <View key={item.id} style={styles.headerboxlist}>
+                {getLogo(subs).map((item, index) => (
+                   <View key={item.id ?? index} style={styles.headerboxlist}>
                     <Image source={LOGO_IMAGES[item.logo]} style={styles.imageLogo} />
                   </View>
                 ))}
@@ -71,7 +72,7 @@ const SubsMainList = ( { subs } )=>{
           <View style={styles.bottom}>
               <Text style={{borderBottomWidth:1, padding:5}}>구독 서비스 요금제 목록</Text>
               {userSubsInfo(subs).map((item, index) => (
-                      <View key={index} style={styles.bottomboxlist}>                        
+                        <View key={item.id ?? index} style={styles.bottomboxlist}>                       
                           <Text style={[styles.bottombox, {flex:1,}]}>{item.category}</Text>
                           <View style={[styles.bottombox, {flex:4, flexDirection: 'row',}]}>
                             <Image source={LOGO_IMAGES[item.logo_img]} style={styles.imageLogo}></Image>
@@ -88,9 +89,11 @@ const SubsMainList = ( { subs } )=>{
         ) : (
           // === 변경하기 클릭 시 새 공간 ===
         <View style={styles.ChangeContainer}>
-          <SubsChange             
+          <SubsChange                         
             data={selectedItem} 
-            onBack={() => setIsChanging(false)} 
+            userid={subs[0].user_id}
+            onBack={() => setIsChanging(false)}
+            onRefresh={fetchUserSubs}            
           />
         </View>
       )}

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Modal, 
   View, 
@@ -12,6 +12,8 @@ import {
   Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import axios from 'axios';
+import BASE_URL, { API_ENDPOINTS } from './../../../common/api/config';
 
 const CustomAddSubs = ({ visible, onClose, onSubmit }) => {
 
@@ -20,8 +22,26 @@ const CustomAddSubs = ({ visible, onClose, onSubmit }) => {
   const [inputprice, setinputprice] = useState('');
   const [category, setCategory] = useState('카테고리 선택'); 
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
   
-  const categories = ['OTT', '음악', '도서/교육', '쇼핑', '생활/편의', '기타'];
+  // const categories = ['OTT', '음악', '도서/교육', '쇼핑', '생활/편의', '기타'];
+  useEffect(() => {
+    if (visible) {
+      fetchCategories();
+    }
+  }, [visible]);
+
+  const fetchCategories = async () => {    
+    try {      
+      const response = await axios.get(
+        `${BASE_URL}${API_ENDPOINTS.SUBS.GET_CATEGORIES}`      
+      );
+
+      setCategories(response.data);
+    } catch (error) {
+      console.error('카테고리별 구독 서비스 조회 실패:', error);      
+    }
+  };
 
   // 숫자에 콤마 추가
   const formatPrice = (value) => {
@@ -152,7 +172,7 @@ const CustomAddSubs = ({ visible, onClose, onSubmit }) => {
                 <ScrollView nestedScrollEnabled={true}>
                   {categories.map((item, index) => (
                     <TouchableOpacity 
-                      key={index} 
+                      key={item} 
                       style={styles.dropdownItem}
                       onPress={() => {
                         setCategory(item);

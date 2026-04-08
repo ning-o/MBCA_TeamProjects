@@ -26,7 +26,7 @@ const Subsfooter = ({ subs })=>{
         <View style={[styles.footerItem, {width: 50}]}>
           <Text>총액</Text>
         </View>
-        <View style={[styles.footerItem, {paddingHorizontal: 10}]}>
+        <View style={[styles.footerItem, {minWidth:50, paddingHorizontal: 10}]}>
           <Text>{getCategoryString(subs)}</Text>
         </View>
         <View style={[styles.footerItem, {flex: 1}]}>

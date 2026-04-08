@@ -15,10 +15,9 @@ import {
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
 
-import BASE_URL, { API_ENDPOINTS } from './config';
-
 import SubsMainList from './SubsComponents/SubsMainList';
 import Subsfooter from './SubsComponents/SubsFooter';
+import BASE_URL, { API_ENDPOINTS } from './../../common/api/config';
 
 const { width, height } = Dimensions.get('window');
 
@@ -30,26 +29,26 @@ export const getUserSubs = async (userId) => {
   return res.data;
 };
 
+
 export default function SubsMain() {
   const insets = useSafeAreaInsets();
   const [subs, setSubs] = useState([]);
 
   const userId = 1; // 임시
 
+  const fetchUserSubs = async () => {
+    try {
+      const data = await getUserSubs(userId);
+      setSubs(data);
+    } catch (error) {
+      console.log('구독 데이터 불러오기 실패:', error);
+    }
+  };
+  
   // 시작시 사용자 구독 정보 가져오기
   useEffect(() => {
-    const fetchSubs = async () => {
-      try {
-        const data = await getUserSubs(userId);
-        setSubs(data);
-      } catch (error) {
-        console.log('구독 데이터 불러오기 실패:', error);
-      }
-    };
-
-    fetchSubs();
+    fetchUserSubs();
   }, [userId]);
-
 
   return (
     <View style={{flex:1}}>
@@ -61,7 +60,7 @@ export default function SubsMain() {
                   
         <View style={styles.mainbox}>        
           <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>              
-            <SubsMainList subs={subs} />  
+            <SubsMainList subs={subs} fetchUserSubs={fetchUserSubs}/> 
           </ScrollView>
 
           <Subsfooter subs={subs} />
