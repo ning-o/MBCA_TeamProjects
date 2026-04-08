@@ -13,7 +13,7 @@ if not DATABASE_URL:
     raise ValueError("DATABASE_URL 환경변수를 찾을 수 없습니다.")
 
 BASE_DIR = Path(__file__).resolve().parent
-CSV_PATH = BASE_DIR / "pantry.csv"
+CSV_PATH = BASE_DIR / "pantry_updated.csv"
 
 STORAGE_MAP = {
     "냉장": 1,
@@ -47,6 +47,7 @@ def main():
         "category",
         "ingredient_name",
         "storage_type",
+        "base_price",
     ]
     missing_cols = [col for col in required_columns if col not in df.columns]
     if missing_cols:
@@ -99,6 +100,7 @@ def main():
         "ingredient_name",
         "storage_code",
         "expiry_date",
+        "base_price",
     ]
     df = df[final_columns].copy()
 
@@ -130,13 +132,15 @@ def main():
             category,
             ingredient_name,
             storage_code,
-            expiry_date
+            expiry_date,
+            base_price
         ) VALUES (
             :ingredient_id,
             :category,
             :ingredient_name,
             :storage_code,
-            :expiry_date
+            :expiry_date,
+            :base_price
         )
     """)
 

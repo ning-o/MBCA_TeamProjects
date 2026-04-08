@@ -10,51 +10,86 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
-
-// [수정]: 하드코딩된 SERVER_URL 대신 공통 apiClient를 임포트합니다.
-import apiClient from '../../common/api/api_client';
+import apiClient from '../../common/api/api_client'; // 공통 API 클라이언트
 
 const { height } = Dimensions.get('window');
 
+const getDifficultyText = (value) =>{
+  const num = Number(value);
+
+  if(num ===1) return "쉬움";
+  if(num ===2) return "보통";
+  if(num ===3) return "어려움";
+
+  return value ?? '-';
+}
+
 const RecipeScreen = () => {
+  const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [recipes, setRecipes] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [invenId, setInvenId] = useState(1);
 
-  // [수정]: fetch 대신 apiClient.post를 사용하여 네트워크 요청을 수행합니다.
+  /**
+   * buildInputStock: 서버 응답 데이터를 AI 모델 입력 규격(Dict)으로 변환
+   */
+  const buildInputStock = (inventoryData) => {
+    const stock = {};
+
+    (inventoryData || []).forEach((item) => {
+      const name = item.item_name || item.name || item.ingredient_name;
+      const quantity = item.quantity ?? item.amount ?? 1;
+
+      if (!name) return;
+      stock[name] = quantity;
+    });
+
+    return stock;
+  };
+
+  /**
+   * fetchRecommendations: apiClient 적용
+   */
   const fetchRecommendations = async () => {
     try {
       setLoading(true);
 
-      // 테스트용 페이로드 데이터
-      const payload = {
-        input_stock: {
-          계란: 2,
-          양파: 5,
-          대파: 3,
-          간장: 30,
-          참기름: 60,
-        },
+      // 1) 실제 냉장고 재고 조회
+      const inventoryResult = await apiClient.get(apiClient.urls.FRIDGE.GET_INVENTORY(1));
+      console.log('[1] inventory raw =', inventoryResult);
+
+      const inventoryList =
+        inventoryResult?.items ||
+        inventoryResult?.inventory ||
+        inventoryResult?.data ||
+        inventoryResult ||
+        [];
+
+      console.log('[2] inventory list =', inventoryList);
+
+      // 2) 추천용 input_stock 변환
+      const input_stock = buildInputStock(inventoryList);
+      console.log('[3] input_stock =', input_stock);
+
+      // 3) 추천 API 호출
+      const result = await apiClient.post(apiClient.urls.FRIDGE.RECOMMEND_RECIPE, {
+        input_stock,
         top_k: 5,
-      };
+      });
 
-      /**
-       * [변경 포인트]
-       * 1. 하드코딩된 IP 주소를 완전히 제거했습니다.
-       * 2. apiClient가 config.js의 설정을 따라 자동으로 현재 접속된 IP의 8000번 포트를 바라봅니다.
-       * 3. apiClient 내부의 타임아웃(10초) 설정을 따르므로 별도의 AbortController 로직이 필요 없습니다.
-       */
-      const data = await apiClient.post('/api/fridge/recommend/test', payload);
+      console.log('[4] recommend result =', result);
 
-      console.log("[3] 응답 데이터 수신 완료:", data);
-
-      setRecipes(data.recommendations || []);
+      setRecipes(result?.recipes || []);
       setSelectedIndex(0);
     } catch (error) {
-      console.log("[ERROR] fetchRecommendations:", error);
-      // apiClient 인터셉터에서 이미 Alert을 띄워주지만, 상세 에러 확인을 위해 로그를 남깁니다.
+      console.log('[ERROR] fetchRecommendations:', error);
+      console.log('[ERROR] detail:', error?.response?.data?.detail);
+      console.log('[ERROR] status:', error?.response?.status);
+      console.log('[ERROR] data:', error?.response?.data);
     } finally {
       setLoading(false);
     }
@@ -68,7 +103,7 @@ const RecipeScreen = () => {
 
   const matchRateText = useMemo(() => {
     if (!selectedRecipe) return '0%';
-    return `${Math.round((selectedRecipe.score || 0) * 100)}%`;
+    return `${Math.round((selectedRecipe.match_score || 0) * 100)}%`;
   }, [selectedRecipe]);
 
   const ingredientItems = useMemo(() => {
@@ -92,47 +127,94 @@ const RecipeScreen = () => {
   const aiReason = useMemo(() => {
     if (!selectedRecipe) return '추천 결과가 없습니다.';
 
-    const daysLeftText =
-      selectedRecipe.days_left != null
-        ? `${selectedRecipe.days_left}일 안에 활용 추천`
-        : '빠르게 활용 추천';
+    const matched = selectedRecipe.available_ingredients || [];
+    const missing = selectedRecipe.missing_ingredients || [];
+    const difficultyText = getDifficultyText(selectedRecipe.difficulty);
 
     const matchedText =
-      selectedRecipe.matched_ingredients?.length > 0
-        ? selectedRecipe.matched_ingredients.join(', ')
-        : '현재 보유 재료';
+      matched.length > 0 ? matched.join(', ') : '보유 재료';
 
-    return `현재 재료와의 매칭률이 높습니다. 특히 ${matchedText}를 바로 활용할 수 있고, ${daysLeftText} 기준 테스트 추천 레시피입니다.`;
+    const missingText =
+      missing.length > 0 ? missing.join(', ') : '추가 재료 없이 바로 조리 가능';
+
+    return `현재 냉장고에 있는 ${matchedText}를 바로 활용할 수 있고, 부족한 재료는 ${missingText}입니다. 조리시간은 약 ${selectedRecipe.cooking_time ?? '-'}분 정도이며 난이도는 ${difficultyText}입니다.`;
   }, [selectedRecipe]);
 
   const recipeSteps = useMemo(() => {
     if (!selectedRecipe) return '레시피 설명이 없습니다.';
 
-    const missing =
-      selectedRecipe.missing_ingredients?.length > 0
-        ? selectedRecipe.missing_ingredients.join(', ')
-        : '없음';
+    const available = selectedRecipe.available_ingredients || [];
+    const missing = selectedRecipe.missing_ingredients || [];
+    const difficultyText = getDifficultyText(selectedRecipe.difficulty);
 
     return [
-      `1. 추천 레시피: ${selectedRecipe.recipe_name || '-'}`,
-      `2. 현재 보유 재료를 먼저 준비합니다: ${(selectedRecipe.matched_ingredients || []).join(', ') || '-'}`,
-      `3. 부족한 재료가 있다면 추가 준비합니다: ${missing}`,
-      `4. 조리시간은 ${selectedRecipe.cooking_time ?? '-'}분, 난이도는 ${selectedRecipe.difficulty ?? '-'}입니다.`,
-      `5. 현재 단계는 테스트 화면이므로 상세 조리법 대신 추천 결과를 우선 검증합니다.`,
+      `메뉴: ${selectedRecipe.recipe_name || '-'}`,
+      `메인 재료: ${available.length > 0 ? available.join(', ') : '-'}`,
+      `추가 재료: ${missing.length > 0 ? missing.join(', ') : '없음'}`,
+      `예상 조리시간: ${selectedRecipe.cooking_time ?? '-'}분`,
+      `난이도: ${difficultyText}`,
     ].join('\n');
   }, [selectedRecipe]);
 
   const tags = useMemo(() => {
     if (!selectedRecipe) return [];
     return [
-      selectedRecipe.category ? `#${selectedRecipe.category}` : '#추천',
+      selectedRecipe.category ? `#${selectedRecipe.category}` : '#추천메뉴',
       selectedRecipe.cooking_time ? `#${selectedRecipe.cooking_time}분` : '#시간미정',
-      selectedRecipe.days_left != null ? `#${selectedRecipe.days_left}일내활용` : '#테스트',
+      selectedRecipe.days_left != null ? `#${selectedRecipe.days_left}일내활용` : '#유통기한_임박',
     ];
   }, [selectedRecipe]);
 
-  const handleComplete = () => {
-    Alert.alert('테스트', '지금은 추천 화면 연결 테스트 단계입니다.');
+  const handleComplete = async () => {
+    const selectedRecipe = recipes[selectedIndex];
+    if (!selectedRecipe) return;
+
+    Alert.prompt(
+      "요리 완료 보고",
+      `'${selectedRecipe.menu_name}' 요리를 완료하셨습니까?\n몇 인분을 조리하셨는지 입력해주세요.`,
+      [
+        { text: "취소", style: "cancel" },
+        {
+          text: "완료",
+          onPress: async (servings) => {
+            const servingsNum = parseInt(servings) || 1; // 입력 없으면 기본 1인분
+
+            try {
+              // 엔드포인트 연결
+              const response = await apiClient.post(apiClient.urls.FRIDGE.COMPLETE_COOKING, {
+                inven_id: invenId,
+                recipe_id: selectedRecipe.recipe_id || 0, // 레시피 ID (추천 결과에 포함됨)
+                servings: servingsNum
+              });
+
+              if (response) {
+                const savedAmount = response.added_saving?.toLocaleString() || "0";
+                
+                // [정상 규격] Alert.alert("제목", "내용", [버튼배열])
+                Alert.alert(
+                  "절약 성공!", 
+                  `이번 요리로 총 ${savedAmount}원을 절약하셨습니다.`, 
+                  [
+                    { 
+                      text: "확인", 
+                      onPress: () => {
+                        // 탭 내비게이션 명칭 확인: 'FridgeHome' 또는 'Fridge'
+                        navigation.navigate('FridgeMain'); 
+                      } 
+                    }
+                  ]
+                );
+              }
+            } catch (error) {
+              console.error("통신 실패:", error);
+              // 공통 에러 처리는 apiClient에서 하겠지만, 여기서도 안전하게 한 번 더!
+            }
+          },
+        },
+      ],
+      "plain-text",
+      "1" // 기본값 1인분 세팅
+    );
   };
 
   return (
@@ -179,11 +261,11 @@ const RecipeScreen = () => {
                 </View>
 
                 <Text style={styles.infoText}>
-                  ⏱ {selectedRecipe.cooking_time ?? '-'} mins  |  난이도 :{' '}
-                  {selectedRecipe.difficulty ?? '-'}
+                  ⏱ 약 {selectedRecipe.cooking_time ?? '-'} 분  |  난이도 :{' '}
+                  {getDifficultyText(selectedRecipe.difficulty)}
                 </Text>
                 <Text style={styles.infoSubText}>
-                  남은 유통기한(테스트): {selectedRecipe.days_left ?? '-'}일
+                  남은 유통기한: {selectedRecipe.days_left ?? '-'}일
                 </Text>
               </View>
             </View>
@@ -215,7 +297,7 @@ const RecipeScreen = () => {
                           index === selectedIndex && styles.miniCardTitleSelected,
                         ]}
                       >
-                        매칭률 {Math.round((item.score || 0) * 100)}%
+                        매칭률 {Math.round((item.match_score || 0) * 100)}%
                       </Text>
                     </TouchableOpacity>
                   ))}
@@ -225,21 +307,21 @@ const RecipeScreen = () => {
 
             <View style={styles.bottomSheet}>
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>AI's Pick Reason</Text>
+                <Text style={styles.sectionTitle}>냉털 메뉴 추천</Text>
                 <View style={styles.aiBubble}>
                   <Text style={styles.aiText}>{aiReason}</Text>
                 </View>
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Recipe Step</Text>
+                <Text style={styles.sectionTitle}>요리 정보</Text>
                 <View style={styles.recipeDetailBox}>
                   <Text style={styles.recipeDetailText}>{recipeSteps}</Text>
                 </View>
               </View>
 
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Ingredients</Text>
+                <Text style={styles.sectionTitle}>요리 재료</Text>
                 {ingredientItems.map((item) => (
                   <View key={item.id} style={styles.ingredientRow}>
                     <View style={[styles.checkBox, item.checked && styles.checkedBox]}>
@@ -251,7 +333,7 @@ const RecipeScreen = () => {
               </View>
 
               <TouchableOpacity style={styles.completeButton} onPress={handleComplete}>
-                <Text style={styles.completeButtonText}>요리 완료!</Text>
+                <Text style={styles.completeButtonText}>요리 완료</Text>
               </TouchableOpacity>
             </View>
           </>

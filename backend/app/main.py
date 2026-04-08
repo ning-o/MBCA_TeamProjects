@@ -1,6 +1,5 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
 from app.core.database import engine, Base
 
 # 모델 등록
@@ -12,8 +11,9 @@ from app.api.auth import auth
 from app.api.fridge import fridge
 from app.api.fridge.ocr import router as fridge_ocr_router
 from app.api.fridge.expiry_test import router as expiry_test_router
-from app.api.subs import subs
 from app.api.fridge.recommend import router as fridge_recommend_router
+from app.api.fridge.LLM_recommended import router as llm_recommend_router
+from app.api.subs import subs
 
 # 부모/공통 테이블 먼저 생성
 app.models.common.Base.metadata.create_all(
@@ -28,7 +28,7 @@ app.models.common.Base.metadata.create_all(
 # 전체 등록된 모델 기준 테이블 생성
 Base.metadata.create_all(bind=engine)
 
-# FastAPI 앱은 한 번만 생성
+# FastAPI 앱 생성
 app = FastAPI(title="Tikkle Project API")
 
 # 프론트 연결용 CORS
@@ -56,10 +56,11 @@ def read_root():
     }
 
 # 라우터 등록
+app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
+app.include_router(subs.router, prefix="/api/subs", tags=["Subs"])
+
 app.include_router(fridge.router, prefix="/api/fridge", tags=["Fridge"])
 app.include_router(fridge_ocr_router, prefix="/api/fridge", tags=["Fridge OCR"])
 app.include_router(expiry_test_router, prefix="/api/fridge", tags=["Expiry Test"])
-app.include_router(subs.router, prefix="/api/subs", tags=["Subs"])
-app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(fridge_recommend_router, prefix="/api/fridge", tags=["Fridge Recommend"])
-
+app.include_router(llm_recommend_router, prefix="/api/fridge", tags=["Fridge LLM Recommend"])

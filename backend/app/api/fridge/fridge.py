@@ -6,10 +6,11 @@ from datetime import datetime, timedelta, date
 from typing import List, Dict, Any
 
 from app.core.database import get_db
-from app.models.fridge import fridge_models  # DB 모델 (Pantry, RefIngredients 등)
+from app.models.fridge import fridge_models  # DB 모델
 from app.schemas import fridge_schema        # 스키마
 from app.schemas.fridge_schema import IngredientCreate, IngredientResponse
-from app.ml.fridge.expiry_logic import tikkle_oracle  # 유통기한 예측 오라클 모델
+from app.ml.fridge.expiry_logic import tikkle_oracle  # 유통기한 예측 모델
+from app.models.common import TotalSaving # common.py에 정의된 집계 모델
 
 router = APIRouter()
 
@@ -174,11 +175,27 @@ def get_fridge_inventory(inven_id: int, db: Session = Depends(get_db)):
         fridge_models.RefIngredients.inven_id == inven_id
     ).all()
 
+    # 프론트 탭 필터링을 위한 대분류 카테고리 매핑
+    BROAD_CAT_MAP = {
+        '축산물': '육류', '포장육': '육류', '양념육': '육류', '햄류': '육류', '소시지': '육류', '베이컨': '육류',
+        '채소류': '신선식품', '과일류': '신선식품', '허브류': '신선식품', '신선편이': '신선식품',
+        '수산물': '해산물', '수산가공품': '해산물', '어묵': '해산물',
+        '유제품': '유제품', '유가공품': '유제품', '발효유': '유제품', '계란류': '유제품'
+    }
+
     # 프론트엔드 형식에 맞게 데이터 가공
     inventory = []
     for ref, name, cat in results:
         # 오늘 날짜와 유통기한(d_days) 차이 계산하여 D-Day 산출
-        d_day_val = (ref.d_days - date.today()).days
+        if ref.d_days:
+            # 데이터가 있을 때만 날짜 계산
+            d_day_val = (ref.d_days - date.today()).days
+        else:
+            # 데이터가 없으면(None) 에러 대신 안전하게 999(기한 없음 의미) 부여
+            d_day_val = 999
+        
+        # DB의 상세 카테고리를 프론트의 탭 분류 기준에 맞게 변환
+        broad_cat = BROAD_CAT_MAP.get(cat, "기타")
         
         inventory.append({
             "id": str(ref.ref_no),
@@ -186,7 +203,93 @@ def get_fridge_inventory(inven_id: int, db: Session = Depends(get_db)):
             "count": str(ref.quantity),
             "dday": d_day_val,
             "storage": "냉장" if ref.storage_type == "1" else "냉동" if ref.storage_type == "2" else "실온",
-            "category": cat
+            "category": broad_cat  # 변환된 카테고리로 전송
         })
-        
+    
     return inventory
+
+
+@router.post("/complete-cooking")
+def complete_cooking(data: fridge_schema.CompleteCookingRequest, db: Session = Depends(get_db)):
+    """
+    요리 완료 시 호출되는 API:
+    1. 레시피에 필요한 재료가 내 냉장고에 있는지 확인
+    2. 해당 재료들의 base_price 합산 및 절약액(Saving) 계산
+    3. 냉장고에서 재료 삭제 및 Refrigerator 테이블에 절약액 누적
+    """
+
+    current_ym = datetime.now().strftime("%Y%m")
+
+
+    # 1. 냉장고 및 사용자 정보 조회
+    fridge = db.query(fridge_models.Refrigerator).filter(
+        fridge_models.Refrigerator.inven_id == data.inven_id
+    ).first()
+    
+    if not fridge:
+        raise HTTPException(status_code=404, detail="냉장고 정보를 찾을 수 없습니다.")
+
+    # 2. 레시피 재료 매칭 및 가격 합산 로직 (기존과 동일)
+    recipe_ings = db.query(fridge_models.RecipeIngredients).filter(
+        fridge_models.RecipeIngredients.recipe_id == data.recipe_id
+    ).all()
+
+    total_base_price = 0
+    consumed_ref_nos = []
+
+    for r_ing in recipe_ings:
+        my_ing = db.query(fridge_models.RefIngredients).filter(
+            fridge_models.RefIngredients.inven_id == data.inven_id,
+            fridge_models.RefIngredients.ingredient_id == r_ing.ingredient_id
+        ).first()
+
+        if my_ing:
+            pantry_item = db.query(fridge_models.Pantry).filter(
+                fridge_models.Pantry.ingredient_id == my_ing.ingredient_id
+            ).first()
+            if pantry_item:
+                total_base_price += pantry_item.base_price
+            consumed_ref_nos.append(my_ing.ref_no)
+
+    # 3. 인분 수를 반영한 절약 금액 산출
+    # 공식: (외식비 12,000원 * 인분) - (재료비 20% * 인분)
+    # 인분이 늘어날수록 절약한 외식비 총액도 비례해서 늘어납니다.
+    unit_saving = 12000 - int(total_base_price * 0.2)
+    if unit_saving < 5000: unit_saving = 8000  # 1인분당 최소 절약액
+    
+    calculated_total_saving = unit_saving * data.servings
+
+    try:
+        # 4. 재료 삭제 (실제 냉장고에서 한 묶음의 재료를 소모했다고 간주)
+        if consumed_ref_nos:
+            db.query(fridge_models.RefIngredients).filter(
+                fridge_models.RefIngredients.ref_no.in_(consumed_ref_nos)
+            ).delete(synchronize_session=False)
+
+        # 5. Refrigerator 및 TotalSaving(공통 집계)에 최종 합산액 저장
+        fridge.total_savings = (fridge.total_savings or 0) + calculated_total_saving
+
+        new_log = TotalSaving(
+            ym=current_ym, # String(6) 제약 준수
+            user_id=fridge.user_id,
+            category="fridge",
+            amount=int(calculated_total_saving),
+            description=f"레시피 ID {data.recipe_id} ({data.servings}인분) 요리 완료"
+        )
+        db.add(new_log)
+        
+        db.commit()
+
+        
+        return {
+            "status": "success", 
+            "servings": data.servings,
+            "added_saving": calculated_total_saving
+        }
+
+    except Exception as e:
+        db.rollback()
+        print(f"DB 저장 실패: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"데이터 저장 실패: {str(e)}")
+        
+    

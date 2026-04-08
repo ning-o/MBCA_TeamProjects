@@ -20,6 +20,7 @@ class Refrigerator(Base):
     inven_nickname = Column(String(30))
     mounth_food_exp = Column(Integer, default=0)
     current_spent = Column(Integer, nullable=False, default=0)
+    total_savings = Column(Integer, default=0, nullable=False)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
 
     ingredients = relationship(
@@ -42,6 +43,7 @@ class Pantry(Base):
     ingredient_name = Column(String(30), nullable=False)
     storage_code = Column(Integer, nullable=False)
     expiry_date = Column(Integer, nullable=False)
+    base_price = Column(Integer, default=0)
 
     ref_ingredients = relationship(
         "RefIngredients",
