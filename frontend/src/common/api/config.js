@@ -36,6 +36,7 @@ export const API_ENDPOINTS = {
   CREATE_MASTER_SUB: (userId, masterId) => `/api/subs/${userId}/insertSubsMaster/${masterId}`,
   CREATE_BUNDLE_SUB: (userId, bundleId) => `/api/subs/${userId}/insertSubsBundle/${bundleId}`,
   UPDATE_USER_SUB: (userId, masterId, change_subs_id) => `/api/subs/${userId}/updateSubs/${masterId}/${change_subs_id}`,  
+  DELETE_USER_SUB: (userId, userSubId) => `/api/subs/${userId}/DeleteSubs/${userSubId}`,  
   },
 };
 

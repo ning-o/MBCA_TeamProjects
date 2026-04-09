@@ -59,16 +59,14 @@ def read_root():
 # 라우터 등록
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(subs.router, prefix="/api/subs", tags=["Subs"])
-
 app.include_router(fridge.router, prefix="/api/fridge", tags=["Fridge"])
+
 app.include_router(fridge_ocr_router, prefix="/api/fridge", tags=["Fridge OCR"])
 app.include_router(expiry_test_router, prefix="/api/fridge", tags=["Expiry Test"])
 app.include_router(fridge_recommend_router, prefix="/api/fridge", tags=["Fridge Recommend"])
 app.include_router(llm_recommend_router, prefix="/api/fridge", tags=["Fridge LLM Recommend"])
-app.include_router(subs.router, prefix="/api/subs", tags=["Subs"])
 app.include_router(subs_recommend, prefix="/api/subs", tags=["Subs Recommend"])
-app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 
 # subs db 데이터 저장용
-# from app.api.subs.temp_inset_subsdata import router
-# app.include_router(router, prefix="/api/subs", tags=["Subs"])
+from app.api.subs.temp_inset_subsdata import router
+app.include_router(router, prefix="/api/subs", tags=["Subs"])

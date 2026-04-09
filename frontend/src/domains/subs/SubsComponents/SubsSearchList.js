@@ -14,7 +14,7 @@ import CustomAddModal from './CustomAddSubs';
 import LOGO_IMAGES from './../SubsImageURL';
 import BASE_URL, { API_ENDPOINTS } from './../../../common/api/config';
 
-const SubsSearchList = ({ subs, category, userId }) => {
+const SubsSearchList = ({ subs, category, userId, triggerMainRefresh  }) => {
   const [subsList, setSubsList] = useState(subs || []);
   const [categorySubs, setCategorySubs] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -124,25 +124,19 @@ const SubsSearchList = ({ subs, category, userId }) => {
         return;
       }
 
-      if (!selectedDetail?.id) {
-        Alert.alert('안내', '추가할 구독을 먼저 선택해주세요.');
-        return;
-      }
-
       await axios.post(
         `${BASE_URL}${API_ENDPOINTS.SUBS.CREATE_MASTER_SUB(
           userId,
           selectedDetail.id
         )}`
-      );
-
-      navigation.navigate('Main', { refresh: Date.now() });
+      );      
 
       const refreshResponse = await axios.get(
         `${BASE_URL}${API_ENDPOINTS.SUBS.GET_USER_SUBS(userId)}`
       );
 
       setSubsList(refreshResponse.data);
+      triggerMainRefresh();
 
       Alert.alert('성공', '구독이 추가되었습니다.');
     } catch (error) {
@@ -174,10 +168,7 @@ const SubsSearchList = ({ subs, category, userId }) => {
           {category.map((item, index) => (
             <TouchableOpacity
               key={`${item}-${index}`}
-              style={[
-                styles.categorybox,
-                selectedCategory === item && styles.selectedBox,
-              ]}
+              style={[styles.categorybox,selectedCategory === item && styles.selectedBox,]}
               onPress={() => handleCategorySelect(item)}
             >
               <Text>{item}</Text>
@@ -198,16 +189,14 @@ const SubsSearchList = ({ subs, category, userId }) => {
         />
       </View>
 
+      {/* 카테고리 선택시 구독 로고들 출력 */}
       {selectedCategory && (
         <View style={styles.bottom}>
           <View style={styles.bottomcategoryList}>
             {logoList.map((item, index) => (
               <TouchableOpacity
                 key={`${item.logo_img}-${index}`}
-                style={[
-                  styles.bottomcategorybox,
-                  selectedsubscribe === item.logo_img && styles.selectedBox,
-                ]}
+                style={[styles.bottomcategorybox, selectedsubscribe === item.logo_img && styles.selectedBox,]}
                 onPress={() => handlelogoSelect(item.logo_img)}
               >
                 <Image
@@ -277,7 +266,7 @@ const SubsSearchList = ({ subs, category, userId }) => {
                     ))}
 
                     <TouchableOpacity
-                      style={styles.bottompricebox}
+                      style={[styles.bottompricebox, {borderTopWidth:1, paddingTop:5}]}
                       onPress={handleInsertSubs}
                     >
                       <Text>추가하기</Text>
@@ -318,10 +307,12 @@ const styles = StyleSheet.create({
   headerbox: {
     padding: 2,
     flexDirection: 'row',
+    flexWrap: 'wrap'
   },
 
   headerboxlist: {
     paddingHorizontal: 5,
+    paddingTop:5,
   },
 
   container: {
@@ -332,6 +323,7 @@ const styles = StyleSheet.create({
 
   categoryList: {
     flexDirection: 'row',
+    flexWrap: 'wrap'
   },
 
   categorybox: {

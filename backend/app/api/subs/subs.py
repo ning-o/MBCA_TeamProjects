@@ -5,7 +5,7 @@ from app.core.database import get_db
 # from app.models.subs import subs_models
 
 from app.crud.subs import UserSubsResponse as CRUD
-from app.schemas.subs_dto import SubsResponse, SubsLogoResponse, UserSubsResponse
+from app.schemas.subs_dto import SubsResponse, SubsLogoResponse, UserSubsResponse, CommonResponse
 
 router = APIRouter()
 
@@ -44,11 +44,11 @@ def get_user_subs(user_id: int, db: Session = Depends(get_db)):
     return CRUD.read_subs(db, user_id)
 
 # 구독 서비스 선택시 유저 데이터 집어넣고 가져오기
-@router.post("/{user_id}/insertSubsMaster/{master_id}", response_model=SubsResponse)
+@router.post("/{user_id}/insertSubsMaster/{master_id}", response_model=CommonResponse)
 def create_master_subscription(user_id: int, master_id: int, db: Session = Depends(get_db)):
     return CRUD.create_subscription(db=db, user_id=user_id, master_id=master_id)
 
-@router.post("/{user_id}/insertSubsBundle/{bundle_id}", response_model=SubsResponse)
+@router.post("/{user_id}/insertSubsBundle/{bundle_id}", response_model=CommonResponse)
 def create_bundle_subscription(user_id: int, bundle_id: int, db: Session = Depends(get_db)):
     return CRUD.create_subscription(db=db, user_id=user_id, bundle_id=bundle_id)
 
@@ -56,5 +56,9 @@ def create_bundle_subscription(user_id: int, bundle_id: int, db: Session = Depen
 #  구독 서비스 변경시 유저 데이터 수정
 @router.post("/{user_id}/updateSubs/{master_id}/{change_subs_id}", response_model=dict)
 def update_master_subscription(user_id: int, change_subs_id: int, master_id: int, db: Session = Depends(get_db)):
-    return CRUD.update_subscription(db=db, user_id=user_id, change_subs_id=change_subs_id, master_id=master_id,)
+    return CRUD.update_subscription(db=db, user_id=user_id, master_id=master_id, change_subs_id=change_subs_id)
 
+# 내가 구독한 서비스 해지(삭제)하기
+@router.delete("/{user_id}/DeleteSubs/{master_id}", response_model=dict)
+def delete_user_sub(user_id: int, master_id:int , db: Session = Depends(get_db)):
+    return CRUD.delete_subs(db, user_id, master_id)

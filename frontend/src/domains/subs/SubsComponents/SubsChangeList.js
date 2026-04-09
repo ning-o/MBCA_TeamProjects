@@ -1,108 +1,144 @@
-import React from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { 
-  StyleSheet, 
+import React, { useEffect, useState } from 'react';
+import {
+  StyleSheet,
   TouchableOpacity,
-  Text, 
-  View,   
+  Text,
+  View,
   Image,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
+import axios from 'axios';
 
 import LOGO_IMAGES from './../SubsImageURL';
+import BASE_URL, { API_ENDPOINTS } from './../../../common/api/config';
 
-// 새 컴포넌트 예시 (SubsChangeView.js 라고 가정)
 const SubsChangeList = ({ category, onBack, onSelect }) => {
-    
-    const logo = category; // db에서 카테고리(category)로 검색하여 로그 사진들 가져올 예정      
+  const [categorySubs, setCategorySubs] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchCategorySubs = async (categoryName) => {
+    try {
+      setLoading(true);
+
+      const response = await axios.get(
+        `${BASE_URL}${API_ENDPOINTS.SUBS.GET_BY_CATEGORY(categoryName)}`
+      );
+
+      // 같은 로고 중복 제거
+      const uniqueLogoList = [
+        ...new Set(response.data.map((item) => item.logo_img)),
+      ];
+
+      setCategorySubs(uniqueLogoList);
+    } catch (error) {
+      console.log('카테고리 구독 목록 조회 실패:', error);
+      setCategorySubs([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (category) {
+      fetchCategorySubs(category);
+    }
+  }, [category]);
 
   return (
     <View style={styles.container}>
-        <ScrollView 
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={true}
-        >
-            <View style={styles.logoListbox}>
-                {logo.map((item, index) => (
-                    <View key={index} style={styles.logoList}>                        
-                        <TouchableOpacity key={index}                            
-                            onPress={() => onSelect(item)}
-                        >
-                            <Image source={LOGO_IMAGES[item]} style={styles.imageLogo}></Image>
-                        </TouchableOpacity>
-                    </View>
-                ))}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={true}
+      >
+        <View style={styles.logoListbox}>
+          {loading ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator size="small" />
+              <Text style={{ marginTop: 6 }}>목록 불러오는 중...</Text>
             </View>
-                        
-            <View style={styles.bottom}>
-                <TouchableOpacity onPress={onBack} style={{marginLeft:'auto', marginTop:'auto', backgroundColor:'#ddd'}}>
-                    <Text>뒤로 가기</Text>
+          ) : (
+            categorySubs.map((item, index) => (
+              <View key={`${item}-${index}`} style={styles.logoList}>
+                <TouchableOpacity onPress={() => onSelect(item)}>
+                  <Image
+                    source={LOGO_IMAGES[item]}
+                    style={styles.imageLogo}
+                  />
                 </TouchableOpacity>
-            </View>
+              </View>
+            ))
+          )}
+        </View>
 
-            
-        </ScrollView>
-        
-        
-        
-        {/* 선택된 데이터 출력 */}
-        {/* <View style={styles.infoCard}>
-            <Text>카테고리: {data.category}</Text>
-            <Text>서비스명: {data.name}</Text>
-            <Text>현재 가격: {data.price}원</Text>
-        </View> */}
-
-        {/* 돌아가기 */}
-        {/* <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Text>돌아가기</Text>
-        </TouchableOpacity> */}
+        <View style={styles.bottom}>
+          <TouchableOpacity
+            onPress={onBack}
+            style={styles.backButton}
+          >
+            <Text>뒤로 가기</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,       
-        borderBottomWidth:1,         
-    },
+  container: {
+    flex: 1,
+  },
 
-    scrollView: {
-        flex: 1,        
-    },
+  scrollView: {
+    flex: 1,
+  },
 
-    scrollContent: {
-        flexGrow: 1,
-    },
+  scrollContent: {
+    flexGrow: 1,
+  },
 
-    logoListbox: {
-        flexDirection: 'row',  
-        flexWrap: 'wrap',
-        marginTop:10,
-        paddingHorizontal: 5,
-    },
+  logoListbox: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    borderTopWidth:1,
+    padding: 10,
+    gap: 10,
+  },
 
-    logoList: {
-        marginLeft:10,
-        marginBottom: 10,
-    },
+  logoList: {
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
-    imageLogo:{
-        width: 30, 
-        height: 30,
-        borderRadius: 100 / 2,        
-        borderWidth:1,
+  imageLogo: {
+    width: 45,
+    height: 45,
+    borderRadius: 50,
+    borderWidth: 1,
+  },
 
-    },
+  loadingBox: {
+    width: '100%',
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
-    bottom:{
-        flex:1,
-        flexDirection: 'row',        
-        marginLeft: -5,
-        
-    },
+  bottom: {
+    marginTop: 20,
+    paddingHorizontal: 10,
+    paddingBottom: 10,
+  },
 
-
-})
+  backButton: {
+    marginLeft: 'auto',
+    backgroundColor: '#ddd',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+});
 
 export default SubsChangeList;

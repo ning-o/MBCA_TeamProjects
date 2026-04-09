@@ -41,7 +41,7 @@ const fetchMyProfile = async () => {
   }
 };
 
-export default function SubsMain({ route }) {
+export default function SubsMain({ mainRefreshKey , triggerSearchRefresh }) {
   const insets = useSafeAreaInsets();
   const [subs, setSubs] = useState([]);
   const [userId, setUserId] = useState(null);
@@ -58,9 +58,12 @@ export default function SubsMain({ route }) {
   }, []);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) return;    
 
-    const fetchUserSubs = async () => {
+    fetchUserSubs();
+  }, [userId, mainRefreshKey]);
+
+  const fetchUserSubs = async () => {
       try {
         const data = await getUserSubs(userId);
         setSubs(data);
@@ -68,9 +71,6 @@ export default function SubsMain({ route }) {
         console.log('구독 데이터 불러오기 실패:', error);
       }
     };
-
-    fetchUserSubs();
-  }, [userId, route?.params?.refresh]);
 
   return (
     <View style={{ flex: 1 }}>
@@ -86,7 +86,7 @@ export default function SubsMain({ route }) {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            <SubsMainList subs={subs} />
+            <SubsMainList subs={subs} fetchUserSubs={fetchUserSubs} triggerSearchRefresh={triggerSearchRefresh} />            
           </ScrollView>
 
           <Subsfooter subs={subs} />
