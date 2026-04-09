@@ -24,8 +24,7 @@ class SubscriptionsUser(Base):
     bundle_id = Column(Integer, ForeignKey("subscription_bundle.id"), nullable=True)                    # 구독 결합 서비스 코드 id
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True, nullable=False) # 구독 설정 날짜 (구독 설정일)
     is_auto_pay = Column(Boolean, default=False, nullable=False)                                        # 자동 결제 활성화 상태 (True: 활성, False: 비활성화)    
-
-    # user = relationship("users", back_populates="Subscriptions_user") # common.py  users 연결
+    
     master = relationship("SubscriptionMaster", back_populates="subscriptions")
     bundle = relationship("SubscriptionBundle", back_populates="subscriptions")
 

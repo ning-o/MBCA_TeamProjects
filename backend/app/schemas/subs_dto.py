@@ -47,6 +47,11 @@ class SubsResponse(BaseModel):
     class Config:
         orm_mode = True
  
+class CommonResponse(BaseModel):
+    success: bool
+    data: Any
+    message: str
+
 # 구독 서비스 로고 정보 가져오기
 class SubsLogoResponse(BaseModel):    
     id: int

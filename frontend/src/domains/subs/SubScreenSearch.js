@@ -41,7 +41,7 @@ const fetchMyProfile = async () => {
   }
 };
 
-export default function SubScreenSearch() {
+export default function SubScreenSearch( {searchRefreshKey, triggerMainRefresh } ) {
   const [subs, setSubs] = useState([]);
   const [category, setCategory] = useState([]);
   const [userId, setUserId] = useState(null);
@@ -70,7 +70,7 @@ export default function SubScreenSearch() {
     };
 
     fetchSubs();
-  }, [userId]);
+  }, [userId, searchRefreshKey]);
 
   return (
     <View style={styles.container}>
@@ -80,7 +80,7 @@ export default function SubScreenSearch() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <SubsSearchList subs={subs} category={category} userId={userId} setSubs={setSubs} />
+          <SubsSearchList subs={subs} category={category} userId={userId} setSubs={setSubs} triggerMainRefresh={triggerMainRefresh} />
         </ScrollView>
 
         <Subsfooter subs={subs} />

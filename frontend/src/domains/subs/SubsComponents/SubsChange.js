@@ -146,8 +146,6 @@ const SubsChange = ({ data, userid, onBack, onRefresh }) => {
     setSelectedDetail(null);
   };
 
-  
-
   const currentPriceInfo = (priceData[selectedService.logo] || [])
   .sort((a, b) => a.price - b.price);
 
@@ -161,7 +159,7 @@ const SubsChange = ({ data, userid, onBack, onRefresh }) => {
         <View style={styles.header}>
           <Text style={{ marginRight: 10 }}>{data.category}</Text>
           <Image source={LOGO_IMAGES[data.logo_img]} style={[styles.imageLogo, { marginRight: 20 }]}/>
-          <Text style={{ marginRight: 10 }}>{data.name}</Text>
+          <Text style={{ maxWidth:100 , marginRight: 10 }}>{data.name}</Text>
           <Text style={{ marginLeft: 'auto' }}>
             {Number(data.base_price).toLocaleString()}원
           </Text>

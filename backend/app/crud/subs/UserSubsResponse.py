@@ -146,3 +146,17 @@ def update_subscription(
         db.rollback()
         print(f"[ERROR] 구독 update: {e}")
         raise e
+    
+def delete_subs(db: Session, user_id: int, master_id: int):
+    sub = db.query(SubscriptionsUser).filter(
+        SubscriptionsUser.user_id == user_id,
+        SubscriptionsUser.master_id == master_id
+    ).first()
+
+    if not sub:
+        return {"msg": "not found"}
+
+    db.delete(sub)
+    db.commit()
+
+    return {"msg": "deleted"}
