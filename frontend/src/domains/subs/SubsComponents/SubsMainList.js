@@ -20,7 +20,7 @@ import axios from 'axios';
 import BASE_URL, { API_ENDPOINTS } from './../../../common/api/config';
 
 
-const SubsMainList = ( { subs , fetchUserSubs, triggerSearchRefresh  } )=>{
+const SubsMainList = ( { subs , userid, fetchUserSubs, triggerSearchRefresh  } )=>{
   const [isChanging, setIsChanging] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null); // 데이터 전달용 변수
   const [recommendData, setRecommendData] = useState(null);
@@ -28,13 +28,14 @@ const SubsMainList = ( { subs , fetchUserSubs, triggerSearchRefresh  } )=>{
   const [isLoading, setIsLoading] = useState(true);
   const [matchedPackage, setMatchedPackage] = useState(null);
 
+  const myInvenId = userid;
+
   useEffect(() => {
-    getRecommend();
+    getRecommend();    
   }, [subs]);
 
   useEffect(() => {
     const fetchMatchedPackage = async () => {
-      const myInvenId = subs[0].user_id;
       if (!myInvenId) return;
       
       try {
@@ -173,11 +174,10 @@ const SubsMainList = ( { subs , fetchUserSubs, triggerSearchRefresh  } )=>{
 
   // 해지하기 버튼 클릭시 db 삭제
   const handleDeletePress = async (item) => {
-    const userId = subs[0].user_id; // 현재 유저
 
     try {
       await axios.delete(
-        `${BASE_URL}${API_ENDPOINTS.SUBS.DELETE_USER_SUB(userId, item.id)}`
+        `${BASE_URL}${API_ENDPOINTS.SUBS.DELETE_USER_SUB(userid, item.id)}`
       );
       
       // 삭제 후 리스트 다시 불러오기
@@ -345,7 +345,7 @@ const SubsMainList = ( { subs , fetchUserSubs, triggerSearchRefresh  } )=>{
       <View style={styles.ChangeContainer}>
         <SubsChange                         
           data={selectedItem} 
-          userid={subs[0].user_id}
+          userid={userid}
           onBack={() => setIsChanging(false)}
           onRefresh={fetchUserSubs}
         />

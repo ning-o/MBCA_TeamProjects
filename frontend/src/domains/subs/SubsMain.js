@@ -29,7 +29,7 @@ const fetchMyProfile = async () => {
   try {
     const jsonValue = await AsyncStorage.getItem('userInfo');
     const userInfo = jsonValue != null ? JSON.parse(jsonValue) : null;
-
+    
     if (userInfo?.id) {
       return userInfo.id;
     }
@@ -86,7 +86,7 @@ export default function SubsMain({ mainRefreshKey , triggerSearchRefresh }) {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            <SubsMainList subs={subs} fetchUserSubs={fetchUserSubs} triggerSearchRefresh={triggerSearchRefresh} />            
+            <SubsMainList subs={subs} userid={userId} fetchUserSubs={fetchUserSubs} triggerSearchRefresh={triggerSearchRefresh} />            
           </ScrollView>
 
           <Subsfooter subs={subs} />
