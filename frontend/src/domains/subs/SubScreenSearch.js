@@ -7,6 +7,7 @@ import {
   ScrollView,
   Dimensions
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
@@ -45,6 +46,7 @@ export default function SubScreenSearch( {searchRefreshKey, triggerMainRefresh }
   const [subs, setSubs] = useState([]);
   const [category, setCategory] = useState([]);
   const [userId, setUserId] = useState(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     const init = async () => {
@@ -75,6 +77,10 @@ export default function SubScreenSearch( {searchRefreshKey, triggerMainRefresh }
   return (
     <View style={styles.container}>
       <Header />
+      <View style={[
+        styles.container,
+        { paddingTop: insets.top + 56 },
+      ]}>      
       <View style={styles.mainbox}>
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -84,6 +90,7 @@ export default function SubScreenSearch( {searchRefreshKey, triggerMainRefresh }
         </ScrollView>
 
         <Subsfooter subs={subs} />
+      </View>
       </View>
       <Footer />
     </View>
