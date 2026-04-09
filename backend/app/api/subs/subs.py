@@ -49,11 +49,6 @@ def get_user_subs(user_id: int, db: Session = Depends(get_db)):
 def create_master_subscription(user_id: int, master_id: int, db: Session = Depends(get_db)):
     return CRUD.create_subscription(db=db, user_id=user_id, master_id=master_id)
 
-@router.post("/{user_id}/insertSubsBundle/{bundle_id}", response_model=CommonResponse)
-def create_bundle_subscription(user_id: int, bundle_id: int, db: Session = Depends(get_db)):
-    return CRUD.create_subscription(db=db, user_id=user_id, bundle_id=bundle_id)
-
-
 #  구독 서비스 변경시 유저 데이터 수정
 @router.post("/{user_id}/updateSubs/{master_id}/{change_subs_id}", response_model=dict)
 def update_master_subscription(user_id: int, change_subs_id: int, master_id: int, db: Session = Depends(get_db)):

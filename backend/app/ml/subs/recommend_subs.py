@@ -60,16 +60,12 @@ def SubsRecommend(payload: RecommendRequest):
         category = col.replace("_count", "")
         price_col = f"{category}_price"
 
-        if new_data[col] > target_mean[col] :
-            meanprice = target_mean[price_col]
-            categoryprice = new_data[price_col]
+        result[category] = [
+            int(target_mean[col]),
+            int(target_mean[price_col])
+        ]
 
-            if (categoryprice - meanprice) > 10000:
-                result[category] = {
-                    "price_diff": round(categoryprice - meanprice, 2),
-                    "count_diff": round(new_data[col] - target_mean[col] , 1),
-                }    
 
-    return {        
+    return {
         "recommendations": result
     }

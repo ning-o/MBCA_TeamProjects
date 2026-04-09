@@ -53,7 +53,6 @@ class SubscriptionsUser(Base):
     user_id = Column(Integer, nullable=False, index=True)              # 사용자 ID
     master_id = Column(Integer, ForeignKey("subscription_master.id", ondelete="CASCADE"), nullable=False)
     is_auto_pay = Column(Boolean, nullable=False, default=False)       # 자동 결제 여부
-    detail = Column(JSON, nullable=False)                              # 사용자별 맞춤 설정 정보
     created_by = Column(String(40), nullable=False)                   # 최초 등록자 ID
     created_at = Column(DateTime, server_default=func.now(), nullable=False)
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
