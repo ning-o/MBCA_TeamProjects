@@ -34,6 +34,9 @@ async def run_ocr(file: UploadFile = File(...)) -> dict[str, Any]:
 
         # 1. OCR 원문 추출
         raw_text = ocr_service.extract_text(str(temp_path))
+        print("========== [DEBUG: RAW TEXT] ==========")
+        print(raw_text)
+        print("=======================================")
 
         if not raw_text or not raw_text.strip():
             raise HTTPException(status_code=400, detail="OCR 결과가 비어 있습니다.")
@@ -60,6 +63,8 @@ async def run_ocr(file: UploadFile = File(...)) -> dict[str, Any]:
         "filename": original_filename,
         "total_price": parsed.get("total_price"),
         "quantities": parsed.get("quantities", {}),
+        "items": parsed.get("items", []),
+        "status": "success"
         }
 
     except HTTPException:

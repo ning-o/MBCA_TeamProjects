@@ -85,52 +85,38 @@ const OCRConfirmScreen = ({ route }) => {
   };
 
   /**
-   * normalizeParsedItems: 서버 응답 데이터(다양한 키값)를 클라이언트 규격으로 정규화
-   * - 백엔드 파서(parser.py)가 반환하는 여러 형태의 응답 구조를 앱 내 UI에서 쓸 수 있게 통일함
+   * normalizeParsedItems: 서버 응답 데이터 정규화
+   * - 신규 리스트 방식(items)과 기존 객체 방식(quantities)을 모두 완벽히 대응하도록 수리했습니다.
    */
   const normalizeParsedItems = (responseData) => {
-    const parsed =
-      responseData?.parsed_items ||
-      responseData?.items ||
-      responseData?.results ||
-      null;
+    // 1. [검문 강화] items 리스트가 실제로 '데이터를 포함'하고 있는지 먼저 확인합니다.
+    const itemsList = responseData?.items || responseData?.parsed_items || responseData?.results || [];
 
-    if (Array.isArray(parsed)) {
-      return parsed.map((item, index) => ({
-        // 인덱스가 0부터 시작하므로 DB(Pantry)의 1번부터 매칭되도록 + 1 추가
+    if (Array.isArray(itemsList) && itemsList.length > 0) {
+      // 리스트에 알맹이가 있다면 이 로직을 태웁니다.
+      return itemsList.map((item, index) => ({
         id: (item.id ?? index) + 1, 
-        rawName: String(
-          item.raw_text ??
-          item.rawName ??
-          item.original_name ??
-          item.name ??
-          item.canonical_food ??
-          ''
-        ).trim(),
-        matchedName: String(
-          item.canonical_food ??
-          item.matchedName ??
-          item.matched_name ??
-          item.item_name ??
-          item.name ??
-          ''
-        ),
-        quantity: String(item.quantity ?? item.qty ?? 1),
-        price: String(item.price ?? item.amount ?? ''),
+        // [수정] 백엔드에서 온 상세 명칭(ex: 오겹살)을 rawName에 우선 할당
+        rawName: String(item.original_name ?? item.canonical_food ?? '').trim(),
+        // DB 매칭용 표준 명칭(ex: 돼지고기)은 matchedName에 보관 (서버 전송용)
+        matchedName: String(item.ingredient_id ?? ''),
+        quantity: String(item.quantity ?? 1),
+        price: String(item.after_price ?? item.price ?? ''),
       }));
     }
 
-    // 객체(Key-Value) 형태의 수량 데이터 응답 대응
-    if (responseData?.quantities && typeof responseData.quantities === 'object') {
+    // 2. [비상 전력] 리스트가 비었거나 없을 경우, 로그에 찍혔던 quantities(객체)를 뒤져서 복구합니다.
+    if (responseData?.quantities && typeof responseData.quantities === 'object' && Object.keys(responseData.quantities).length > 0) {
       return Object.entries(responseData.quantities).map(([name, qty], index) => ({
         id: index + 1, 
         rawName: name,
         matchedName: name,
         quantity: String(qty ?? 1),
-        price: '',
+        price: '', // 예전 방식은 가격이 없으므로 빈값 처리
       }));
     }
 
+    // 3. 둘 다 없으면 빈 배열 반환
     return [];
   };
 
@@ -266,12 +252,13 @@ const OCRConfirmScreen = ({ route }) => {
 
       // 2. 서버 DTO 규격에 맞춰 페이로드 구성 (IngredientCreate 스키마 대응)
       const payload = items.map((item) => ({
-        inven_id: myRealInvenId, // 확보된 진짜 냉장고 ID 투입
+        inven_id: myRealInvenId, // 진짜 냉장고 ID
         ingredient_id: item.id,
         ingredient_name: item.matchedName ? item.matchedName.trim() : "", // 공백 제거 처리 추가
         storage_type: String(item.storageType || "1"), // 기본값 냉장(1) 할당
         quantity: parseInt(item.quantity) || 1, 
         phurchase_date: new Date().toISOString().split('T')[0], // 오늘 날짜 기록
+        after_price: parseInt(item.price, 10) || 0,
       }));
 
       console.log(`[SAVE] 데이터 전송 시작 (대상 냉장고 ID: ${myRealInvenId})`);
@@ -362,7 +349,10 @@ const OCRConfirmScreen = ({ route }) => {
                           <View style={styles.collapsedInfo}>
                             <Text style={styles.itemIndex}>{index + 1}</Text>
                             <Text style={styles.itemNameSimple} numberOfLines={1}>
-                              {item.matchedName || item.rawName || '(이름 없음)'}
+                              {item.rawName || item.matchedName || '(이름 없음)'}
+                            </Text>
+                            <Text style={{ fontSize: 13, color: '#3B82F6', marginRight: 15 }}>
+                              {item.price ? `${item.price}원` : ''} 
                             </Text>
                             <Text style={styles.itemQuantitySimple}>
                               수량: {item.quantity}

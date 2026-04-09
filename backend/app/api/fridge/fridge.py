@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, date
 from typing import List, Dict, Any
+from sqlalchemy import func
 
 from app.core.database import get_db
 from app.models.fridge import fridge_models  # DB 모델
@@ -12,6 +13,8 @@ from app.schemas.fridge_schema import IngredientCreate, IngredientResponse
 from app.ml.fridge.expiry_logic import tikkle_oracle  # 유통기한 예측 모델
 from app.models.common import TotalSaving # common.py에 정의된 집계 모델
 from app.core.auth import get_current_user_id
+from app.schemas.fridge_schema import RefrigeratorResponse, RefrigeratorBase
+
 
 router = APIRouter()
 
@@ -131,6 +134,26 @@ def save_multiple_ingredients(
             )
             
             db.add(new_ref_ingredient)
+
+            # ========================================================
+            # [추가] PhurchaseInfo 테이블에 구매 이력 저장 로직
+            # ========================================================
+            new_purchase_record = fridge_models.PhurchaseInfo(
+                # JSON 형태로 원문 품목명 저장
+                raw_item_name={"display_name": item.ingredient_name}, 
+                matched_ingredient_id=pantry_item.ingredient_id,
+                quantity_bill=item.quantity,
+                
+                # [수정 포인트] hasattr 체크 대신 item에서 직접 가져옵니다.
+                # 스키마에 필드를 추가했다면 item.after_price로 바로 접근 가능합니다.
+                after_price=item.after_price, 
+                
+                phurchase_date=purchase_d
+            )
+            db.add(new_purchase_record)
+            # =======================================================
+
+
             saved_count += 1
 
         except Exception as e:
@@ -301,7 +324,7 @@ def create_refrigerator(
     user_id: int = Depends(get_current_user_id) # 토큰에서 ID 추출
 ):
     """
-    로그인한 유저의 정보로 냉장고를 생성합니다.
+    [냉장고 생성 API]
     """
     # 중복 체크 로직
     existing = db.query(fridge_models.Refrigerator).filter(
@@ -325,5 +348,71 @@ def create_refrigerator(
     db.refresh(new_fridge)
 
     return new_fridge
-        
+
+@router.patch("/refrigerator/{inven_id}", response_model=RefrigeratorResponse)
+def update_refrigerator(inven_id: int, fridge_in: RefrigeratorBase, db: Session = Depends(get_db)):
+    """
+    [냉장고 정보 수정 API]
+    - 기존 냉장고의 이름이나 예산 설정을 변경합니다.
+    """
+    db_fridge = db.query(fridge_models.Refrigerator).filter(
+        fridge_models.Refrigerator.inven_id == inven_id
+    ).first()
     
+    if not db_fridge:
+        raise HTTPException(status_code=404, detail="냉장고를 찾을 수 없습니다.")
+        
+    # 변경된 값만 업데이트
+    if fridge_in.inven_nickname is not None:
+        db_fridge.inven_nickname = fridge_in.inven_nickname
+    if fridge_in.mounth_food_exp is not None:
+        db_fridge.mounth_food_exp = fridge_in.mounth_food_exp
+        
+    db.commit()
+    db.refresh(db_fridge)
+    return db_fridge
+
+
+@router.get("/details/{inven_id}", response_model=RefrigeratorResponse)
+def get_refrigerator_details(inven_id: int, db: Session = Depends(get_db)):
+    """
+    [냉장고 상세 정보 조회]
+    - 특정 냉장고의 이름과 설정된 예산 정보를 반환합니다.
+    - 메인 화면 진입 시 최신 설정값을 동기화하기 위해 사용됩니다.
+    """
+    fridge = db.query(fridge_models.Refrigerator).filter(
+        fridge_models.Refrigerator.inven_id == inven_id
+    ).first()
+    
+    if not fridge:
+        raise HTTPException(status_code=404, detail="냉장고 정보가 존재하지 않습니다.")
+        
+    return fridge
+        
+
+
+@router.get("/spending-summary/{inven_id}")
+def get_spending_summary(inven_id: int, db: Session = Depends(get_db)):
+    """
+    [JOIN 방식] 매달 1일 자동으로 0원부터 시작되는 월간 지출 합계 API
+    """
+    today = date.today()
+    first_day_of_month = date(today.year, today.month, 1)
+
+    # 1. 내 냉장고(inven_id)에 현재 들어있는 재료 ID 목록만 중복 없이 추출 (서브쿼리)
+    my_ingredient_ids = db.query(fridge_models.RefIngredients.ingredient_id)\
+        .filter(fridge_models.RefIngredients.inven_id == inven_id)\
+        .distinct().subquery()
+
+    # 2. 위에서 뽑은 ID 목록에 포함되면서 + 이번 달에 구매한 이력만 합산
+    # 이렇게 하면 RefIngredients와 직접 JOIN하지 않기 때문에 수량만큼 배수로 늘어나는 버그가 사라짐ㄴ.
+    total_spent = db.query(func.sum(fridge_models.PhurchaseInfo.after_price))\
+        .filter(
+            fridge_models.PhurchaseInfo.matched_ingredient_id.in_(my_ingredient_ids),
+            fridge_models.PhurchaseInfo.phurchase_date >= first_day_of_month
+        ).scalar() or 0
+
+    return {
+        "total_spent": int(total_spent),
+        "current_month": today.month
+    }
