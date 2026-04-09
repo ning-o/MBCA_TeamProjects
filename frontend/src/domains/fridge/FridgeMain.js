@@ -88,126 +88,127 @@ const FridgeMainScreen = ({ route }) => {
    * - route params 또는 AsyncStorage에서 확보한 myInvenId를 기준으로 데이터 로드
    */
   useFocusEffect(
-    useCallback(() => {
-      const fetchData = async () => {
-        try {
-          // 1. 유효한 인벤토리 ID 확인
-          const targetInvenId = route?.params?.invenId || myInvenId;
+  useCallback(() => {
+    const fetchData = async () => {
+      try {
+        const targetInvenId = route?.params?.invenId || myInvenId;
 
-          // ID 미확보 시 API 호출 중단 (422 에러 방지)
-          if (!targetInvenId) {
-            console.log('[FridgeMain] 인벤토리 ID 대기 중...');
-            return; 
-          }
+        if (!targetInvenId) {
+          console.log('[FridgeMain] 인벤토리 ID 대기 중...');
+          return;
+        }  
 
-          console.log(`[FridgeMain] 조회 시작 - ID: ${targetInvenId}`);
+        console.log(`[FridgeMain] 조회 시작 - ID: ${targetInvenId}`);
 
-          const detailsUrl = apiClient.urls.FRIDGE.GET_DETAILS(targetInvenId); 
-          const details = await apiClient.get(detailsUrl);
+        // 1) 냉장고 상세
+        const detailsUrl = apiClient.urls.FRIDGE.GET_DETAILS(targetInvenId);
+        console.log("[FridgeMain] details URL:", detailsUrl);
 
-          if (details) {
-            setConfirmedFridgeName(details.inven_nickname || "티끌이네");
-            setInputFridgeName(details.inven_nickname || "티끌이네");
-            
-            const budgetStr = String(details.mounth_food_exp ?? '30'); 
-            setMonthlyBudget(budgetStr);
-            setLastValidBudget(budgetStr);
-          }
+        const details = await apiClient.get(detailsUrl);
 
+        if (details) {
+          setConfirmedFridgeName(details.inven_nickname || "티끌이네");
+          setInputFridgeName(details.inven_nickname || "티끌이네");
 
-          // --- [실시간 지출 금액 추가] ---
-          try {
-            const summaryUrl = apiClient.urls.FRIDGE.GET_SPENDING_SUMMARY(targetInvenId);
-            const summaryData = await apiClient.get(summaryUrl);
-            
-            if (summaryData && summaryData.total_spent !== undefined) {
-              // 원 단위 금액을 만원 단위로 변환하여 게이지 반영
-              setSpentAmount(summaryData.total_spent / 10000);
-            }
-          } catch (summaryErr) {
-            console.error('[FridgeMain] 지출 합계 로드 실패:', summaryErr);
-          }
-          // --- [실시간 지출 금액 추가] ---
-          
-
-          // 2. 서버로부터 해당 냉장고의 재료 목록 수신
-          const url = apiClient.urls.FRIDGE.GET_INVENTORY(targetInvenId);
-          const inventoryData = await apiClient.get(url);
-
-          console.log(`[FridgeMain] ${targetInvenId}번 냉장고 접속 성공!`);
-
-          // 3. 재료 유무에 따른 분기 처리
-          if (inventoryData && inventoryData.length > 0) {
-            console.log(`[FridgeMain] 총 ${inventoryData.length}개의 재료 데이터 수신 완료`);
-
-            // 1) 유통기한 기준 오름차순 정렬 (임박 재료 추출)
-            const sortedData = [...inventoryData].sort((a, b) => {
-              const valA = a.d_days || a.dday || "";
-              const valB = b.d_days || b.dday || "";
-              // 문자열 비교와 숫자 비교 예외 처리
-              if (typeof valA === 'string' && typeof valB === 'string') return valA.localeCompare(valB); 
-              return Number(valA) - Number(valB);
-            });
-            
-            const closestItem = sortedData[0];
-            let dDayText = '';
-            let ddayNum = 0;
-
-            // D-Day 계산 로직 수행
-            if (closestItem.dday !== undefined && typeof closestItem.dday === 'number') {
-              ddayNum = closestItem.dday;
-            } else if (closestItem.d_days) {
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              const expiryDate = new Date(String(closestItem.d_days).replace(/-/g, '/'));
-              expiryDate.setHours(0, 0, 0, 0);
-              const diffTime = expiryDate.getTime() - today.getTime();
-              ddayNum = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            }
-
-            // D-Day 텍스트 포맷팅
-            if (ddayNum === 0) dDayText = 'D-Day';
-            else if (ddayNum < 0) dDayText = `D+${Math.abs(ddayNum)}`;
-            else dDayText = `D-${ddayNum}`;
-
-            // 최우선 임박 재료 상태 업데이트
-            setImminentIngredient({ 
-              name: closestItem.ingredient_name || closestItem.name || "알 수 없음", 
-              dDay: dDayText 
-            });
-
-            // 2) AI 레시피 1순위 추천 요청
-            // 현재 인벤토리 데이터를 AI 엔진 규격에 맞게 파싱
-            const input_stock = buildInputStock(inventoryData);
-            const recipeResult = await apiClient.post(apiClient.urls.FRIDGE.RECOMMEND_RECIPE, {
-              input_stock,
-              top_k: 1, // 홈화면용 최적화 (1개만 요청)
-            });
-
-            // 추천 레시피 결과 반영
-            if (recipeResult?.recipes && recipeResult.recipes.length > 0) {
-              setTopRecommendedRecipe(recipeResult.recipes[0].recipe_name);
-            } else {
-              setTopRecommendedRecipe("추천 레시피 없음");
-            }
-
-          } else {
-            // [신규 유저 및 빈 냉장고 대응] 재료 데이터가 없을 경우 초기값 설정
-            console.log('[FridgeMain] 현재 냉장고가 비어있음 (Inventory Empty)');
-            setImminentIngredient({ name: "재료 없음", dDay: "-" });
-            setTopRecommendedRecipe("재료를 추가해주세요");
-          }
-
-        } catch (error) {
-          // API 통신 및 로직 에러 핸들링
-          console.error('[FridgeMain] 데이터 통합 조회 중 예외 발생:', error);
-          setTopRecommendedRecipe("조회 실패");
+          const budgetStr = String(details.mounth_food_exp ?? '30');
+          setMonthlyBudget(budgetStr);
+          setLastValidBudget(budgetStr);
         }
-      };
 
-      fetchData();
-    }, [route?.params?.invenId, myInvenId]) // 종속성 배열에 ID 추가하여 변경 시 자동 재조회
-  );
+        // 2) 지출 합계
+        try {
+          const summaryUrl = apiClient.urls.FRIDGE.GET_SPENDING_SUMMARY(targetInvenId);
+          console.log("[FridgeMain] summary URL:", summaryUrl);
+
+          const summaryData = await apiClient.get(summaryUrl);
+
+          if (summaryData && summaryData.total_spent !== undefined) {
+            setSpentAmount(summaryData.total_spent / 10000);
+          }
+        } catch (summaryErr) {
+          console.error('[FridgeMain] 지출 합계 로드 실패:', summaryErr);
+        }
+
+        // 3) 인벤토리 조회
+        const inventoryUrl = apiClient.urls.FRIDGE.GET_INVENTORY(targetInvenId);
+        console.log("[FridgeMain] inventory URL:", inventoryUrl);
+
+        const inventoryData = await apiClient.get(inventoryUrl);
+
+        console.log(`[FridgeMain] ${targetInvenId}번 냉장고 접속 성공!`);
+
+        if (inventoryData && inventoryData.length > 0) {
+          console.log(`[FridgeMain] 총 ${inventoryData.length}개의 재료 데이터 수신 완료`);
+
+          const sortedData = [...inventoryData].sort((a, b) => {
+            const valA = a.d_days || a.dday || "";
+            const valB = b.d_days || b.dday || "";
+
+            if (typeof valA === 'string' && typeof valB === 'string') {
+              return valA.localeCompare(valB);
+            }
+            return Number(valA) - Number(valB);
+          });
+
+          const closestItem = sortedData[0];
+          let dDayText = '';
+          let ddayNum = 0;
+
+          if (closestItem.dday !== undefined && typeof closestItem.dday === 'number') {
+            ddayNum = closestItem.dday;
+          } else if (closestItem.d_days) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const expiryDate = new Date(String(closestItem.d_days).replace(/-/g, '/'));
+            expiryDate.setHours(0, 0, 0, 0);
+
+            const diffTime = expiryDate.getTime() - today.getTime();
+            ddayNum = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          }
+
+          if (ddayNum === 0) dDayText = 'D-Day';
+          else if (ddayNum < 0) dDayText = `D+${Math.abs(ddayNum)}`;
+          else dDayText = `D-${ddayNum}`;
+
+          setImminentIngredient({
+            name: closestItem.ingredient_name || closestItem.name || "알 수 없음",
+            dDay: dDayText,
+          });
+
+          const input_stock = buildInputStock(inventoryData);
+
+          const recipeResult = await apiClient.post(
+            apiClient.urls.FRIDGE.RECOMMEND_RECIPE,
+            {
+              input_stock,
+              top_k: 1,
+            }
+          );
+
+          if (recipeResult?.recipes && recipeResult.recipes.length > 0) {
+            setTopRecommendedRecipe(recipeResult.recipes[0].recipe_name);
+          } else {
+            setTopRecommendedRecipe("추천 레시피 없음");
+          }
+        } else {
+          console.log('[FridgeMain] 현재 냉장고가 비어있음 (Inventory Empty)');
+          setImminentIngredient({ name: "재료 없음", dDay: "-" });
+          setTopRecommendedRecipe("재료를 추가해주세요");
+        }
+      } catch (error) {
+            console.error('[FridgeMain] 데이터 통합 조회 중 예외 발생:', error);
+            console.error('[FridgeMain] 응답 status:', error?.response?.status);
+            console.error('[FridgeMain] 응답 data:', error?.response?.data);
+            console.error('[FridgeMain] 실패 URL:', error?.config?.url);
+            console.error('[FridgeMain] 실패 method:', error?.config?.method);
+            setTopRecommendedRecipe("조회 실패");
+          }
+    };
+
+    fetchData();
+  }, [route?.params?.invenId, myInvenId])
+);
 
   const handleBudgetBlur = () => {
     if (monthlyBudget.trim() === '' || parseInt(monthlyBudget) <= 0) {

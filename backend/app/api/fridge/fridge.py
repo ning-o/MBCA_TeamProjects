@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.fridge_schema import CompleteCookingRequest
-from app.models.fridge.fridge_models import RefIngredients, RecipeIngredients
+from app.models.fridge.fridge_models import Refrigerator, RefIngredients, RecipeIngredients
 
 router = APIRouter()
 
@@ -92,3 +92,24 @@ def complete_cooking(data: CompleteCookingRequest, db: Session = Depends(get_db)
             status_code=500,
             detail=f"요리 완료 처리 실패: {str(e)}"
         )
+
+
+@router.get("/{inven_id}")
+def get_refrigerator_detail(inven_id: int, db: Session = Depends(get_db)):
+    refrigerator = (
+        db.query(Refrigerator)
+        .filter(Refrigerator.inven_id == inven_id)
+        .first()
+    )
+
+    if not refrigerator:
+        raise HTTPException(status_code=404, detail="냉장고를 찾을 수 없습니다.")
+
+    return {
+        "inven_id": refrigerator.inven_id,
+        "inven_nickname": refrigerator.inven_nickname,
+        "mounth_food_exp": refrigerator.mounth_food_exp,
+        "current_spent": refrigerator.current_spent,
+        "total_savings": refrigerator.total_savings,
+        "user_id": refrigerator.user_id,
+    }

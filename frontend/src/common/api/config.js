@@ -21,7 +21,7 @@ export const API_ENDPOINTS = {
 //  [냉장고 관리 도메인]
   FRIDGE: { // [카테고리 이름]
     GET_INVENTORY: (invenId) => `/api/fridge/inventory/${invenId}`,
-    GET_DETAILS: (invenId) => `/api/fridge/details/${invenId}`,
+    GET_DETAILS: (invenId) => `/api/fridge/${invenId}`,
     UPDATE_REFRIGERATOR: (invenId) => `/api/fridge/refrigerator/${invenId}`,
     GET_SPENDING_SUMMARY: (invenId) => `/api/fridge/spending-summary/${invenId}`,
     OCR: '/api/fridge/ocr',
