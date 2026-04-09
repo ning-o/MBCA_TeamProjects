@@ -17,6 +17,6 @@ from .fridge.fridge_models import (
 from .subs.subs_models import (
     SubscriptionsUser,
     SubscriptionMaster,
-    SubscriptionBundle,
+    SubscriptionCombination,
     UserAmount
 )
