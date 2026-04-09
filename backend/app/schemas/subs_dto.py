@@ -7,22 +7,23 @@ from datetime import datetime
 class UserSubsInsert(BaseModel):    
     user_id: int
     master_id: Optional[int] = None
-    bundle_id: Optional[int] = None
     payment_date: int
 
 # 사용자 구독 - 사용자의 구독 정보 가져오기
 class UserSubsResponse(BaseModel):
     user_id: int
     master_id: Optional[int] = None
-    bundle_id: Optional[int] = None
     created_at: datetime
     is_auto_pay: bool
+    created_at: Optional[datetime] = None
+    is_auto_pay: Optional[bool] = None
 
     # master 테이블 join 결과
     name: Optional[str] = None
     logo_img: Optional[str] = None
     category: Optional[str] = None
     base_price: Optional[int] = None
+    
 
     class Config:
         orm_mode = True

@@ -10,13 +10,10 @@ def read_subs(db: Session, user_id: int):
         db.query(
             SubscriptionsUser.user_id,
             SubscriptionsUser.master_id,
-            SubscriptionsUser.bundle_id,
-            SubscriptionsUser.created_at,
-            SubscriptionsUser.is_auto_pay,            
             SubscriptionMaster.id,
             SubscriptionMaster.name,
             SubscriptionMaster.logo_img,
-            SubscriptionMaster.category,
+            SubscriptionMaster.category_cd.label("category"),
             SubscriptionMaster.base_price,
         )
         .join(
@@ -33,14 +30,14 @@ def read_subs(db: Session, user_id: int):
 def create_subscription(
     db: Session,
     user_id: int,
-    master_id: int | None = None,
-    bundle_id: int | None = None
+    master_id: int | None = None,    
 ):
     try:
         new_sub = SubscriptionsUser(
             user_id=user_id,
             master_id=master_id,
-            bundle_id=bundle_id
+            is_auto_pay=False,
+            created_by=user_id,            
         )
 
         db.add(new_sub)
@@ -60,7 +57,7 @@ def create_subscription(
 
 # 구독 카테고리 종류 추출
 def read_subs_category(db: Session):
-    sql = text("SELECT DISTINCT category FROM subscription_master")
+    sql = text("SELECT DISTINCT category_cd AS category FROM subscription_master")
     result = db.execute(sql)
     return [row[0] for row in result.fetchall()]
 
@@ -69,15 +66,15 @@ def get_subs_by_logo(db: Session, category: str):
     sql = text("""
         SELECT
             id,
-            category,
+            category_cd AS category,
             logo_img,
             base_price
         FROM subscription_master
-        WHERE category = :category
+        WHERE category_cd = :category_cd
     """)
 
     result = db.execute(sql, {        
-        "category": category
+        "category_cd": category
     })
     return result.mappings().all()
 
@@ -100,7 +97,6 @@ def update_subscription(
     user_id: int,
     change_subs_id: int,   # 수정할 row id
     master_id: int | None = None,  # 바뀌는 값
-    bundle_id: int | None = None
 ):
     try:
         # 기존 구독 조회
@@ -115,14 +111,8 @@ def update_subscription(
                 "message": "해당 구독이 존재하지 않습니다."
             }
 
-        # 값 업데이트
-        if master_id is not None:
-            sub.master_id = master_id
-            sub.bundle_id = None  # master 선택하면 bundle 제거
-
-        if bundle_id is not None:
-            sub.bundle_id = bundle_id
-            sub.master_id = None  # bundle 선택하면 master 제거
+        # 값 업데이트        
+        sub.master_id = master_id
 
         # 시간 업데이트
         sub.created_at = datetime.now(timezone.utc)
@@ -135,8 +125,7 @@ def update_subscription(
             "data": {
                 "id": sub.id,
                 "user_id": sub.user_id,
-                "master_id": sub.master_id,
-                "bundle_id": sub.bundle_id,
+                "master_id": sub.master_id,                
                 "created_at": sub.created_at,
             },
             "message": "구독이 수정되었습니다."

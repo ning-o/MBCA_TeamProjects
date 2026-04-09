@@ -37,9 +37,11 @@ async def upload_subscription_master_csv(
 
                 new_item = SubscriptionMaster(
                     name=row["name"].strip(),
+                    bundle_yn=False,
                     logo_img=row.get("logo_img", "").strip() or None,
                     base_price = int(row["base_price"].replace(",", "").strip()),
-                    category=row["category"].strip(),
+                    category_cd=row["category_cd"].strip(),
+                    company_cd=row.get("logo_img", "").strip() or None,
                     detail=detail_data
                 )
 
