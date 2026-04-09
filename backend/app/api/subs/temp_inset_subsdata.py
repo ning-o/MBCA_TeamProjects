@@ -39,7 +39,7 @@ async def upload_subscription_master_csv(
                     name=row["name"].strip(),
                     logo_img=row.get("logo_img", "").strip() or None,
                     base_price = int(row["base_price"].replace(",", "").strip()),
-                    category=row["category"].strip(),
+                    category_cd=row["category_cd"].strip(),
                     detail=detail_data
                 )
 
