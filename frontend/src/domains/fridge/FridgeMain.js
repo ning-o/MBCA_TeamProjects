@@ -47,7 +47,8 @@ const FridgeMainScreen = ({ route }) => {
   getMyId();
 }, []);
 
-  const spentAmount = 17;     
+  // const spentAmount = 17; # 홈 화면 게이지 목데이터    
+  const [spentAmount, setSpentAmount] = useState(0); // 실시간 지출액 상태
   const budgetStartDay = 1;
 
   const [monthlyBudget, setMonthlyBudget] = useState('30');
@@ -100,6 +101,34 @@ const FridgeMainScreen = ({ route }) => {
           }
 
           console.log(`[FridgeMain] 조회 시작 - ID: ${targetInvenId}`);
+
+          const detailsUrl = apiClient.urls.FRIDGE.GET_DETAILS(targetInvenId); 
+          const details = await apiClient.get(detailsUrl);
+
+          if (details) {
+            setConfirmedFridgeName(details.inven_nickname || "티끌이네");
+            setInputFridgeName(details.inven_nickname || "티끌이네");
+            
+            const budgetStr = String(details.mounth_food_exp ?? '30'); 
+            setMonthlyBudget(budgetStr);
+            setLastValidBudget(budgetStr);
+          }
+
+
+          // --- [실시간 지출 금액 추가] ---
+          try {
+            const summaryUrl = apiClient.urls.FRIDGE.GET_SPENDING_SUMMARY(targetInvenId);
+            const summaryData = await apiClient.get(summaryUrl);
+            
+            if (summaryData && summaryData.total_spent !== undefined) {
+              // 원 단위 금액을 만원 단위로 변환하여 게이지 반영
+              setSpentAmount(summaryData.total_spent / 10000);
+            }
+          } catch (summaryErr) {
+            console.error('[FridgeMain] 지출 합계 로드 실패:', summaryErr);
+          }
+          // --- [실시간 지출 금액 추가] ---
+          
 
           // 2. 서버로부터 해당 냉장고의 재료 목록 수신
           const url = apiClient.urls.FRIDGE.GET_INVENTORY(targetInvenId);
@@ -190,23 +219,33 @@ const FridgeMainScreen = ({ route }) => {
 
   const handleSaveSettings = async () => {
     try {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
-    const response = await saveRefrigeratorData(inputFridgeName, monthlyBudget);
+    // 현재 상태값인 myInvenId를 전달
+    const response = await saveRefrigeratorData(
+      inputFridgeName, 
+      monthlyBudget, 
+      myInvenId // 이 값이 누락되면 신규 생성으로 인식
+    );
 
     if (response) {
       setConfirmedFridgeName(inputFridgeName);
       setLastValidBudget(monthlyBudget);
-      Alert.alert('성공', '냉장고 정보가 저장되었습니다.');
+      Alert.alert('성공', '냉장고 정보가 수정되었습니다.');
       setIsManageModalVisible(false);
     }
   } catch (error) {
-    console.error('[냉장고 저장 에러]:', error);
+    const errorDetail = error.response?.data?.detail || '알 수 없는 오류가 발생했습니다.';
+      console.error(`[SAVE_ERROR] ${errorDetail}`);
+      
+      Alert.alert(
+        '저장 실패', 
+        `서버 통신 중 문제가 발생했습니다.\n(사유: ${errorDetail})`
+      );
   } finally {
     setIsSubmitting(false);
-    Keyboard.dismiss();
   }
-  };
+};
 
   const handleOpenManageModal = () => {
     if (showHint) setShowHint(false); 
@@ -577,9 +616,9 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 12, fontWeight: '600', color: '#64748B' },
   cardContent: { flexDirection: 'row', alignItems: 'center' },
   cardIcon: { fontSize: 18, marginRight: 5 },
-  cardPrefixBlue: { fontSize: 15, color: '#3B82F6', fontWeight: '500' }, 
-  cardValue: { fontSize: 17, fontWeight: 'bold', color: '#1E293B', maxWidth: '80%' },
-  cardUnit: { fontSize: 13, color: '#1E293B', marginLeft: 2, marginTop: 3 },
+  cardPrefixBlue: { fontSize: 15, color: '#3B82F6', fontWeight: '500', marginRight: 10, }, 
+  cardValue: { fontSize: 17, fontWeight: 'bold', color: '#1E293B', maxWidth: '85%' },
+  cardUnit: { fontSize: 13, color: '#1E293B', marginLeft: 6, marginTop: 3 },
   cardSub: { fontSize: 11, color: '#94A3B8', fontWeight: '500' },
   cardInput: { borderBottomWidth: 1, borderBottomColor: '#3B82F6', minWidth: 40, textAlign: 'center' },
   subBtnContainer: {
