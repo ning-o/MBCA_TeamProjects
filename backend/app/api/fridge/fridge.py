@@ -3,7 +3,12 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.schemas.fridge_schema import CompleteCookingRequest
-from app.models.fridge.fridge_models import Refrigerator, RefIngredients, RecipeIngredients
+from app.models.fridge.fridge_models import (
+    Refrigerator,
+    RefIngredients,
+    RecipeIngredients,
+    Pantry,
+)
 
 router = APIRouter()
 
@@ -113,3 +118,56 @@ def get_refrigerator_detail(inven_id: int, db: Session = Depends(get_db)):
         "total_savings": refrigerator.total_savings,
         "user_id": refrigerator.user_id,
     }
+
+
+@router.get("/spending-summary/{inven_id}")
+def get_spending_summary(inven_id: int, db: Session = Depends(get_db)):
+    refrigerator = (
+        db.query(Refrigerator)
+        .filter(Refrigerator.inven_id == inven_id)
+        .first()
+    )
+
+    if not refrigerator:
+        raise HTTPException(status_code=404, detail="냉장고를 찾을 수 없습니다.")
+
+    return {
+        "inven_id": refrigerator.inven_id,
+        "total_spent": refrigerator.current_spent or 0,
+        "total_savings": refrigerator.total_savings or 0,
+    }
+
+
+@router.get("/inventory/{inven_id}")
+def get_inventory(inven_id: int, db: Session = Depends(get_db)):
+    refrigerator = (
+        db.query(Refrigerator)
+        .filter(Refrigerator.inven_id == inven_id)
+        .first()
+    )
+
+    if not refrigerator:
+        raise HTTPException(status_code=404, detail="냉장고를 찾을 수 없습니다.")
+
+    items = (
+        db.query(RefIngredients, Pantry)
+        .join(Pantry, RefIngredients.ingredient_id == Pantry.ingredient_id)
+        .filter(RefIngredients.inven_id == inven_id)
+        .all()
+    )
+
+    result = []
+    for ref_item, pantry_item in items:
+        result.append({
+            "ref_no": ref_item.ref_no,
+            "inven_id": ref_item.inven_id,
+            "ingredient_id": ref_item.ingredient_id,
+            "ingredient_name": pantry_item.ingredient_name,
+            "category": pantry_item.category,
+            "storage_type": ref_item.storage_type,
+            "quantity": ref_item.quantity,
+            "phurchase_date": ref_item.phurchase_date,
+            "d_days": ref_item.d_days,
+        })
+
+    return result
