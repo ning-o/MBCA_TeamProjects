@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     color: '#2E7D32',
-  }
+  },
 
 
   // 팝업창
