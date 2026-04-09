@@ -16,6 +16,10 @@ from app.schemas.auth_schema import (
 )
 from app.models.fridge import fridge_models
 
+from pydantic import BaseModel
+from sqlalchemy import text
+
+
 print("[AUTH FILE LOADED]")
 
 router = APIRouter()
@@ -157,3 +161,39 @@ def login(user_in: UserLoginDTO, db: Session = Depends(get_db)):
         token_type="bearer",
         user_info=user_response,
     )
+
+
+class UserDeleteRequest(BaseModel):
+    user_id: int
+
+@router.post("/delete_user/")
+async def delete_user(request_data: UserDeleteRequest, db: Session = Depends(get_db)):
+    """
+    유저 삭제 (Post Body 방식)
+    """ 
+    
+    # 2. 전달받은 객체에서 user_id 추출
+    user_id = request_data.user_id
+    
+    query = text("""
+        DELETE FROM users
+        WHERE id = :user_id
+    """)
+
+    try:
+        # 3. 쿼리 실행 및 커밋
+        result = db.execute(query, {"user_id": user_id})
+        db.commit()
+
+        if result.rowcount == 0:
+            return {"status": "fail", "message": "해당 유저가 존재하지 않습니다."}
+
+        return {
+            "status": "success",
+            "message": f"User {user_id} deleted successfully."
+        }
+
+    except Exception as e:
+        db.rollback()
+        print(f"Database Error: {e}")
+        raise HTTPException(status_code=500, detail="유저 삭제중 오류가 발생했습니다.")
