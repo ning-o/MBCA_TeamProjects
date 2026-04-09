@@ -6,6 +6,8 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LineChart } from 'react-native-chart-kit';
 import Footer from '../../common/components/Footer'; // 사용 안 할 거면 지우셔도 됩니다
+import apiClient from '../../common/api/api_client';
+import { CommonActions } from '@react-navigation/native';
 
 const mockExpenses = [
   { id: '1', date: '2026-01-15', category: '구독관리', amount: 12000, description: 'Netflix' },
@@ -19,9 +21,10 @@ const mockExpenses = [
 ];
 
 const MonthlyExpenseStats = () => {
+  const navigation = useNavigation();
   const [isManageModalVisible, setIsManageModalVisible] = useState(false);
   const [showHint, setShowHint] = useState(true);
-    const translateY = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
 
   const [activeTab, setActiveTab] = useState('list');
   const [startMonth, setStartMonth] = useState('2026-01');
@@ -80,34 +83,34 @@ const MonthlyExpenseStats = () => {
     setIsManageModalVisible(true);    
   };
 
-  
-    const handleSaveSettings = async () => {
-      try {
-      setIsSubmitting(true);
-  
-      // 현재 상태값인 myInvenId를 전달
-      const response = await saveRefrigeratorData(
-        inputFridgeName, 
-        monthlyBudget, 
-        myInvenId // 이 값이 누락되면 신규 생성으로 인식
-      );
-  
-      if (response) {
-        setConfirmedFridgeName(inputFridgeName);
-        setLastValidBudget(monthlyBudget);
-        Alert.alert('성공', '냉장고 정보가 수정되었습니다.');
-        setIsManageModalVisible(false);
-      }
-    } catch (error) {
-      const errorDetail = error.response?.data?.detail || '알 수 없는 오류가 발생했습니다.';
-        console.error(`[SAVE_ERROR] ${errorDetail}`);
+  const handleUserExit = async () => {
+    const userInfo = await AsyncStorage.getItem('userInfo');
+    if (userInfo) {
+        const parsed = JSON.parse(userInfo);
+        try {
+          const response = await apiClient.post(`/api/auth/delete_user`, {user_id: parsed.id });
+          if (response && response.status === "success" && response.data?.length > 0) {
+              await AsyncStorage.clear(); 
+          }
+        } catch (error) {
+            console.error("회원탈퇴 실패:", error);
+            return;
+        }
         
-        Alert.alert(
-          '저장 실패', 
-          `서버 통신 중 문제가 발생했습니다.\n(사유: ${errorDetail})`
-        );
-    } finally {
-      setIsSubmitting(false);
+        Alert.alert("탈퇴 완료", "그동안 이용해 주셔서 감사합니다.", [
+          {
+              text: "확인",
+              onPress: () => {
+                  // 로그인 화면으로 스택 초기화하며 이동
+                  navigation.dispatch(
+                      CommonActions.reset({
+                          index: 0,
+                          routes: [{ name: 'Login' }], 
+                      })
+                  );
+              }
+          }
+      ]);
     }
   };
 
@@ -353,7 +356,7 @@ const MonthlyExpenseStats = () => {
               <View style={styles.modalMenuContainer}>
                 <TouchableOpacity 
                   style={[styles.modalBtn, { backgroundColor: '#3B82F6' }]} 
-                  onPress={handleSaveSettings}
+                  onPress={handleUserExit}
                 >
                   <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>회원 탈퇴/삭제</Text>
                 </TouchableOpacity>
@@ -642,7 +645,7 @@ const styles = StyleSheet.create({
     width: '65%',
     backgroundColor: '#FFFFFF',
     borderRadius: 25,
-    padding: 10,
+    padding: 0,
     alignItems: 'center',
     elevation: 5,
   },
