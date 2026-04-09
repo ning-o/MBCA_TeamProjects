@@ -8,7 +8,7 @@
 import Constants from 'expo-constants';
 
 // .env에 설정된 IP를 엑스포 실행 시점에 자동으로 주입받음
-const MY_CURRENT_IP = Constants.expoConfig?.hostUri?.split(':')[0] || 'localhost';
+const MY_CURRENT_IP = '54.116.121.237';
 
 const BASE_URL = `http://${MY_CURRENT_IP}:8000`;
 
