@@ -137,7 +137,7 @@ const RecipeScreen = () => {
     const missingText =
       missing.length > 0 ? missing.join(', ') : '추가 재료 없이 바로 조리 가능';
 
-    return `현재 냉장고에 있는 ${matchedText}를 바로 활용할 수 있고, 부족한 재료는 ${missingText}입니다. 조리시간은 약 ${selectedRecipe.cooking_time ?? '-'}분 정도이며 난이도는 ${difficultyText}입니다.`;
+    return `현재 유통기한이 많이 남지 않은 ${matchedText}등의 재료를 바로 활용할 수 있고, 부족한 재료는 ${missingText}입니다. 조리시간은 약 ${selectedRecipe.cooking_time ?? '-'}분 정도이며 난이도는 ${difficultyText}입니다.`;
   }, [selectedRecipe]);
 
   const recipeSteps = useMemo(() => {
@@ -165,57 +165,56 @@ const RecipeScreen = () => {
     ];
   }, [selectedRecipe]);
 
-  const handleComplete = async () => {
-    const selectedRecipe = recipes[selectedIndex];
-    if (!selectedRecipe) return;
+  const handleCookComplete = async () => {
+  const selectedRecipe = recipes[selectedIndex];
+  if (!selectedRecipe) return;
 
-    Alert.prompt(
-      "요리 완료 보고",
-      `'${selectedRecipe.menu_name}' 요리를 완료하셨습니까?\n몇 인분을 조리하셨는지 입력해주세요.`,
-      [
-        { text: "취소", style: "cancel" },
-        {
-          text: "완료",
-          onPress: async (servings) => {
-            const servingsNum = parseInt(servings) || 1; // 입력 없으면 기본 1인분
+  Alert.alert(
+    "요리 완료",
+    `'${selectedRecipe.recipe_name || selectedRecipe.menu_name}' 요리를 완료하셨습니까?`,
+    [
+      { text: "취소", style: "cancel" },
+      {
+        text: "완료",
+        onPress: async () => {
+          try {
+            const payload = {
+              inven_id: invenId,
+              recipe_id: selectedRecipe.recipe_id || selectedRecipe.id || 0,
+              servings: 1,
+            };
 
-            try {
-              // 엔드포인트 연결
-              const response = await apiClient.post(apiClient.urls.FRIDGE.COMPLETE_COOKING, {
-                inven_id: invenId,
-                recipe_id: selectedRecipe.recipe_id || 0, // 레시피 ID (추천 결과에 포함됨)
-                servings: servingsNum
-              });
+            console.log("[요리완료] 요청 payload:", payload);
 
-              if (response) {
-                const savedAmount = response.added_saving?.toLocaleString() || "0";
-                
-                // [정상 규격] Alert.alert("제목", "내용", [버튼배열])
-                Alert.alert(
-                  "절약 성공!", 
-                  `이번 요리로 총 ${savedAmount}원을 절약하셨습니다.`, 
-                  [
-                    { 
-                      text: "확인", 
-                      onPress: () => {
-                        // 탭 내비게이션 명칭 확인: 'FridgeHome' 또는 'Fridge'
-                        navigation.navigate('FridgeMain'); 
-                      } 
-                    }
-                  ]
-                );
-              }
-            } catch (error) {
-              console.error("통신 실패:", error);
-              // 공통 에러 처리는 apiClient에서 하겠지만, 여기서도 안전하게 한 번 더!
-            }
-          },
+            const response = await apiClient.post(
+              apiClient.urls.FRIDGE.COMPLETE_COOKING,
+              payload
+            );
+
+            console.log("[요리완료] 응답:", response);
+
+            Alert.alert(
+              "완료",
+              response?.message || "냉장고 업데이트 완료!",
+              [
+                {
+                  text: "확인",
+                  onPress: async () => {
+                    await fetchRecommendations();
+                    navigation.navigate("FridgeMain", { refresh: true });
+                  },
+                },
+              ]
+            );
+          } catch (error) {
+            console.log("[요리완료] 오류:", error);
+            Alert.alert("오류", "요리 완료 처리 중 오류가 발생했습니다.");
+          }
         },
-      ],
-      "plain-text",
-      "1" // 기본값 1인분 세팅
-    );
-  };
+      },
+    ]
+  );
+};
 
   return (
     <SafeAreaView style={styles.container}>
@@ -332,7 +331,7 @@ const RecipeScreen = () => {
                 ))}
               </View>
 
-              <TouchableOpacity style={styles.completeButton} onPress={handleComplete}>
+              <TouchableOpacity style={styles.completeButton} onPress={handleCookComplete}>
                 <Text style={styles.completeButtonText}>요리 완료</Text>
               </TouchableOpacity>
             </View>

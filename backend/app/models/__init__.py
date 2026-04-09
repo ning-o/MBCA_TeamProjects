@@ -5,18 +5,20 @@
 # 예시: from .fridge.models import Fridge (냉장고 파트 예시)
 
 from app.models.common import User, TotalSaving, CommonCode
+
 from .fridge.fridge_models import (
-    RefAdmin, 
-    Refrigerator, 
-    Pantry, 
-    RefIngredients, 
-    PhurchaseInfo, 
-    Recipe, 
-    RecipeIngredients
+    RefAdmin,
+    Refrigerator,
+    Pantry,
+    RefIngredients,
+    PhurchaseInfo,
+    Recipe,
+    RecipeIngredients,
 )
+
 from .subs.subs_models import (
     SubscriptionsUser,
     SubscriptionMaster,
     SubscriptionBundle,
-    UserAmount
+    UserAmount,
 )

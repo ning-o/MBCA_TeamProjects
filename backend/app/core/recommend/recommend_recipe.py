@@ -86,26 +86,26 @@ def split_ingredient_text(value: Any) -> List[str]:
 
 def expiry_weight(days_left: Optional[int]) -> float:
     if days_left is None:
-        return 1.0
+        return 0.0
     if days_left <= 0:
-        return 4.0
+        return 5.0
     if days_left == 1:
-        return 3.5
+        return 4.5
     if days_left <= 3:
-        return 2.5
+        return 3.0
     if days_left <= 7:
         return 1.5
-    return 1.0
+    return 0.5
 
 
 def role_weight(role: str) -> float:
     if role == "main":
-        return 3.0
+        return 1.0
     if role == "sub":
-        return 1.5
+        return 0.6
     if role == "season":
-        return 0.3
-    return 1.0
+        return 0.15
+    return 0.0
 
 
 class PKLRecipeRecommender:
@@ -151,7 +151,6 @@ class PKLRecipeRecommender:
     ) -> List[Dict[str, Any]]:
         expiry_info = expiry_info or {}
 
-        # 원본 재료명 -> 정규화명
         normalized_stock: Dict[str, float] = {}
         normalized_expiry: Dict[str, int] = {}
 
@@ -159,6 +158,7 @@ class PKLRecipeRecommender:
             norm_name = normalize_text(raw_name)
             if not norm_name or norm_name in STOPWORDS:
                 continue
+
             normalized_stock[norm_name] = float(qty)
 
             if raw_name in expiry_info:
@@ -204,7 +204,7 @@ class PKLRecipeRecommender:
             matched_sub = user_set & set(sub_ingredients)
             matched_season = user_set & set(seasonings)
 
-            # 기존 비율 점수
+            # 기존 호환용
             earned = (
                 len(matched_main) * 3.0 +
                 len(matched_sub) * 1.5 +
@@ -217,31 +217,44 @@ class PKLRecipeRecommender:
             )
             match_score = round(earned / possible, 4) if possible > 0 else 0.0
 
-            # 사장님 기준 핵심 점수: 유통기한 + 주/부재료
-            expiry_score = 0.0
-            role_score = 0.0
+            urgent_used_score = 0.0
+            urgent_used_items = []
 
             for item in matched_main:
-                role_score += role_weight("main")
-                expiry_score += expiry_weight(normalized_expiry.get(item))
+                s = expiry_weight(normalized_expiry.get(item)) * role_weight("main")
+                urgent_used_score += s
+                if s > 0:
+                    urgent_used_items.append(item)
 
             for item in matched_sub:
-                role_score += role_weight("sub")
-                expiry_score += expiry_weight(normalized_expiry.get(item))
+                s = expiry_weight(normalized_expiry.get(item)) * role_weight("sub")
+                urgent_used_score += s
+                if s > 0:
+                    urgent_used_items.append(item)
 
             for item in matched_season:
-                role_score += role_weight("season")
-                expiry_score += expiry_weight(normalized_expiry.get(item))
+                s = expiry_weight(normalized_expiry.get(item)) * role_weight("season")
+                urgent_used_score += s
+                if s > 0:
+                    urgent_used_items.append(item)
 
-            final_score = round((expiry_score * 0.7) + (role_score * 0.3), 4)
+            urgent_used_items = list(dict.fromkeys(urgent_used_items))
+
+            # 화면 표시용: “임박 재료 활용도”
+            # 0~100 범위로 보기 좋게
+            urgent_usage_score = round(min(100.0, urgent_used_score * 12.5), 1)
 
             results.append({
                 "recipe_id": row[recipe_id_col] if recipe_id_col else None,
                 "recipe_name": row[recipe_name_col],
+
+                # 기존값 유지해도 되고, 화면에서는 안 써도 됨
                 "match_score": match_score,
-                "expiry_score": round(expiry_score, 4),
-                "role_score": round(role_score, 4),
-                "final_score": final_score,
+
+                # 새 핵심 지표
+                "urgent_usage_score": urgent_usage_score,
+                "urgent_used_items": urgent_used_items,
+
                 "available_ingredients": available,
                 "missing_ingredients": [x for x in all_ingredients if x not in user_set],
                 "main_ingredients": main_ingredients,
@@ -254,9 +267,9 @@ class PKLRecipeRecommender:
 
         results.sort(
             key=lambda x: (
-                x["final_score"],
+                x["urgent_usage_score"],
+                len(x["urgent_used_items"]),
                 x["match_score"],
-                len(x["available_ingredients"]),
             ),
             reverse=True,
         )
