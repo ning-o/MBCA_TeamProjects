@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
 //  [구독 관리 도메인]
   SUBS: {
   GET_CATEGORIES: '/api/subs/categories',
+  GET_RECOMMEND_SUBS: `/api/subs/recommend`,
   GET_BY_CATEGORY: (category) => `/api/subs/categories/${category}`,
   GET_DETAIL: (subsId) => `/api/subs/subs/${subsId}`,
   GET_USER_SUBS: (userId) => `/api/subs/${userId}/search`,
