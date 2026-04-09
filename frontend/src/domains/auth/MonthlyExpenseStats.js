@@ -1,16 +1,10 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Dimensions,
-  TextInput, 
-} from 'react-native';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, TextInput, Alert, Modal, TouchableWithoutFeedback, Keyboard, Animated } from 'react-native'; 
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Soup, Camera, ChevronRight, Settings, Users, LogOut, UtensilsCrossed } from 'lucide-react-native'; 
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LineChart } from 'react-native-chart-kit';
-// [추가] useSafeAreaInsets : 기기별 노치 높이를 픽셀 단위로 가져오기 위해 추가
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Footer from '../../common/components/Footer'; // 사용 안 할 거면 지우셔도 됩니다
 
 const mockExpenses = [
@@ -25,6 +19,10 @@ const mockExpenses = [
 ];
 
 const MonthlyExpenseStats = () => {
+  const [isManageModalVisible, setIsManageModalVisible] = useState(false);
+  const [showHint, setShowHint] = useState(true);
+    const translateY = useRef(new Animated.Value(0)).current;
+
   const [activeTab, setActiveTab] = useState('list');
   const [startMonth, setStartMonth] = useState('2026-01');
   const [endMonth, setEndMonth] = useState('2026-03');
@@ -48,6 +46,70 @@ const MonthlyExpenseStats = () => {
     acc[month] = (acc[month] || 0) + expense.amount;
     return acc;
   }, {});
+
+  useEffect(() => {
+    if (showHint) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(translateY, { toValue: 10, duration: 600, useNativeDriver: true }),
+          Animated.timing(translateY, { toValue: 0, duration: 600, useNativeDriver: true }),
+        ])
+      ).start();
+    }
+  }, [showHint]);
+  
+  useEffect(() => {
+    const getMyId = async () => {
+      try {
+        const userInfo = await AsyncStorage.getItem('userInfo');
+        if (userInfo) {
+          const parsed = JSON.parse(userInfo);
+          if (parsed.inven_id) {
+            setMyInvenId(parsed.inven_id);
+          }
+        }
+      } catch (e) {
+        console.error("ID 로드 실패:", e);
+      }
+    };
+    getMyId();
+  }, []);
+
+  const handleOpenManageModal = () => {
+    if (showHint) setShowHint(false); 
+    setIsManageModalVisible(true);    
+  };
+
+  
+    const handleSaveSettings = async () => {
+      try {
+      setIsSubmitting(true);
+  
+      // 현재 상태값인 myInvenId를 전달
+      const response = await saveRefrigeratorData(
+        inputFridgeName, 
+        monthlyBudget, 
+        myInvenId // 이 값이 누락되면 신규 생성으로 인식
+      );
+  
+      if (response) {
+        setConfirmedFridgeName(inputFridgeName);
+        setLastValidBudget(monthlyBudget);
+        Alert.alert('성공', '냉장고 정보가 수정되었습니다.');
+        setIsManageModalVisible(false);
+      }
+    } catch (error) {
+      const errorDetail = error.response?.data?.detail || '알 수 없는 오류가 발생했습니다.';
+        console.error(`[SAVE_ERROR] ${errorDetail}`);
+        
+        Alert.alert(
+          '저장 실패', 
+          `서버 통신 중 문제가 발생했습니다.\n(사유: ${errorDetail})`
+        );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const chartData = Object.entries(monthlyTotals)
     .sort()
@@ -173,6 +235,15 @@ const MonthlyExpenseStats = () => {
         <Text style={styles.headerTitle}>월간 절약 통계</Text>
       </View>
 
+      <TouchableOpacity 
+        style={[styles.manageButton, { top: insets.top + 16}]} 
+        onPress={handleOpenManageModal}
+      >
+        <View style={styles.manageButtonContent}>
+          <Settings size={22} color="#EBF2FF" strokeWidth={2.5} />
+        </View>
+      </TouchableOpacity>
+
       {/* Search Filters */}
       <View style={styles.filterContainer}>
         <View style={styles.filterSection}>
@@ -248,6 +319,62 @@ const MonthlyExpenseStats = () => {
       {activeTab === 'list' && renderExpenseList()}
       {activeTab === 'totals' && renderMonthlyTotals()}
       {activeTab === 'chart' && renderChart()}
+
+      
+      {showHint && (
+        <TouchableWithoutFeedback onPress={() => setShowHint(false)}>
+          <View style={StyleSheet.absoluteFillObject}>
+            <Animated.View 
+              style={[
+                styles.hintContainer, 
+                { top: insets.top + 50, transform: [{ translateY }] }
+              ]}
+            >
+              <Text style={styles.hintArrow}>▲</Text>
+              <View style={styles.hintBubble}>
+                <Text style={styles.hintText}>냉장고 설정을 해주세요!</Text>
+              </View>
+            </Animated.View>
+          </View>
+        </TouchableWithoutFeedback>
+      )}
+      
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isManageModalVisible}
+        onRequestClose={() => setIsManageModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>회원 관리</Text>
+              
+              <View style={styles.modalMenuContainer}>
+                <TouchableOpacity 
+                  style={[styles.modalBtn, { backgroundColor: '#3B82F6' }]} 
+                  onPress={handleSaveSettings}
+                >
+                  <Text style={{ color: '#FFFFFF', fontWeight: 'bold' }}>회원 탈퇴/삭제</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalMenuContainer}>
+                <TouchableOpacity 
+                  style={[styles.modalBtn, { backgroundColor: '#F1F5F9' }]} 
+                  onPress={() => {
+                    setIsManageModalVisible(false);
+                  }}
+                >
+                  <Text style={{ color: '#64748B', fontWeight: 'bold' }}>닫기</Text>
+                </TouchableOpacity>
+              </View>
+
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+      
       <Footer/>
     </View>
   );
@@ -480,6 +607,90 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#999',
   },  
+  manageButton: {
+    position: 'absolute',
+    right: 16,
+    zIndex: 1001, 
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  manageButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563eb', 
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#EBF2FF',
+  },
+  manageButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#EBF2FF',
+    marginLeft: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '45%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 25,
+    padding: 25,
+    alignItems: 'center',
+    elevation: 5,
+  },
+  modalTitle: { fontSize: 18, fontWeight: 'bold', marginBottom: 20, color: '#1E293B' },
+  modalMenuContainer: { width: '100%', marginBottom: 20 },
+  modalMenuItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  menuLabel: { fontSize: 15, color: '#1E293B', fontWeight: '600' },
+  menuValue: { fontSize: 14, color: '#64748B' },
+  modalInput: { 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#3B82F6', 
+    fontSize: 14, 
+    padding: 0, 
+    minWidth: 40, 
+    textAlign: 'right',
+    color: '#1E293B'
+  },
+  modalBtn: {
+    width: '48%',
+    paddingVertical: 12,
+    borderRadius: 20,
+    alignItems: 'center',
+    alignSelf:'center'
+  },
+  hintContainer: {
+    position: 'absolute',
+    right: 10,
+    alignItems: 'center',
+    zIndex: 2000,
+  },
+  hintArrow: { fontSize: 24, color: '#3B82F6', marginBottom: -5, marginLeft: 110 },
+  hintBubble: {
+    backgroundColor: '#3B82F6',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 15,
+    alignItems: 'center',
+    elevation: 10,
+  },
+  hintText: { color: '#FFFFFF', fontSize: 14, fontWeight: 'bold' },
+  hintSubText: { color: 'rgba(255, 255, 255, 0.8)', fontSize: 11, marginTop: 4 },
 });
 
 export default MonthlyExpenseStats;
