@@ -92,7 +92,7 @@ const FridgeMainScreen = ({ route }) => {
       const fetchData = async () => {
         try {
           // 1. 유효한 인벤토리 ID 확인
-          const targetInvenId = route?.params?.invenId || myInvenId;
+          const targetInvenId = route?.params?.invenId || myInvenId || 1;
 
           // ID 미확보 시 API 호출 중단 (422 에러 방지)
           if (!targetInvenId) {
