@@ -321,7 +321,7 @@ const MonthlyExpenseStats = () => {
       {activeTab === 'chart' && renderChart()}
 
       
-      {showHint && (
+      {/* {showHint && (
         <TouchableWithoutFeedback onPress={() => setShowHint(false)}>
           <View style={StyleSheet.absoluteFillObject}>
             <Animated.View 
@@ -332,12 +332,12 @@ const MonthlyExpenseStats = () => {
             >
               <Text style={styles.hintArrow}>▲</Text>
               <View style={styles.hintBubble}>
-                <Text style={styles.hintText}>냉장고 설정을 해주세요!</Text>
+                <Text style={styles.hintText}>회원 관리</Text>
               </View>
             </Animated.View>
           </View>
         </TouchableWithoutFeedback>
-      )}
+      )} */}
       
       <Modal
         animationType="fade"
@@ -639,10 +639,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    width: '45%',
+    width: '65%',
     backgroundColor: '#FFFFFF',
     borderRadius: 25,
-    padding: 25,
+    padding: 10,
     alignItems: 'center',
     elevation: 5,
   },
