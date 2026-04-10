@@ -236,17 +236,25 @@ const OCRConfirmScreen = ({ route }) => {
       }
 
       // ---------------------------------------------------------
-      // 하드코딩된 invenId 대신 실제 로그인 정보 사용
+      // 유저의 실제 냉장고 ID 검증 로직 강화
       // ---------------------------------------------------------
       const userInfo = await AsyncStorage.getItem('userInfo');
-      let myRealInvenId = 1; // 기본값 설정
+      let myRealInvenId = null; // 기존의 임의 할당(1) 제거
 
       if (userInfo) {
         const parsed = JSON.parse(userInfo);
-        // 로그인 시 서버에서 내려준 진짜 냉장고 ID(inven_id)를 할당
         if (parsed.inven_id) {
           myRealInvenId = parsed.inven_id;
         }
+      }
+
+      // 유효한 냉장고 ID가 없을 경우 저장을 차단하고 안내합니다.
+      if (!myRealInvenId) {
+        Alert.alert(
+          '저장 불가',
+          '활성화된 냉장고 정보를 찾을 수 없습니다.\n계정에 냉장고가 생성되어 있는지 확인해주세요.'
+        );
+        return;
       }
       // ---------------------------------------------------------
 

@@ -91,17 +91,35 @@ const FridgeMainScreen = ({ route }) => {
     useCallback(() => {
       const fetchData = async () => {
         try {
-          // 1. 유효한 인벤토리 ID 확인
-          const targetInvenId = route?.params?.invenId || myInvenId || 1;
+          // 내 ID 찾기 
+          let targetInvenId = route?.params?.invenId || myInvenId;
 
-          // ID 미확보 시 API 호출 중단 (422 에러 방지)
+          // 없다면, AsyncStorage(DB)를 한 번 더 확인 (비동기 대응)
           if (!targetInvenId) {
-            console.log('[FridgeMain] 인벤토리 ID 대기 중...');
-            return; 
+            const userInfo = await AsyncStorage.getItem('userInfo');
+            if (userInfo) {
+              const parsed = JSON.parse(userInfo);
+              const newId = parsed.inven_id;
+              targetInvenId = parsed.inven_id;
+              
+              if (newId) {
+                setMyInvenId(prevId => {
+                  if (prevId !== newId) return newId;
+                  return prevId;
+                }); 
+              }
+            }
+          }
+
+          // [추가된 예외 처리] ID가 끝까지 없으면 통신 중단
+          if (!targetInvenId) {
+            console.log('[FridgeMain] 냉장고 ID가 없어 미생성 상태로 노출합니다.');
+            return;
           }
 
           console.log(`[FridgeMain] 조회 시작 - ID: ${targetInvenId}`);
 
+          // 3. 냉장고 상세 정보 조회
           const detailsUrl = apiClient.urls.FRIDGE.GET_DETAILS(targetInvenId); 
           const details = await apiClient.get(detailsUrl);
 
@@ -229,10 +247,25 @@ const FridgeMainScreen = ({ route }) => {
     );
 
     if (response) {
-      setConfirmedFridgeName(inputFridgeName);
-      setLastValidBudget(monthlyBudget);
-      Alert.alert('성공', '냉장고 정보가 수정되었습니다.');
-      setIsManageModalVisible(false);
+      // 신규 생성 성공 시(myInvenId가 없었던 경우) 기기 정보 동기화
+      if (!myInvenId && response.inven_id) {
+        console.log(`[FridgeMain] 새 냉장고 번호(${response.inven_id})를 기기에 동기화합니다.`);
+        
+        // ① 현재 메모리 상태 업데이트
+        setMyInvenId(response.inven_id);
+
+        // ② AsyncStorage의 userInfo 업데이트
+        const userInfoStr = await AsyncStorage.getItem('userInfo');
+        if (userInfoStr) {
+          const userInfo = JSON.parse(userInfoStr);
+          userInfo.inven_id = response.inven_id; // 새 inver_id
+          await AsyncStorage.setItem('userInfo', JSON.stringify(userInfo));
+        }
+        setConfirmedFridgeName(inputFridgeName);
+        setLastValidBudget(monthlyBudget);
+        Alert.alert('성공', '냉장고 설정이 완료되었습니다.');
+        setIsManageModalVisible(false);
+    }
     }
   } catch (error) {
     const errorDetail = error.response?.data?.detail || '알 수 없는 오류가 발생했습니다.';

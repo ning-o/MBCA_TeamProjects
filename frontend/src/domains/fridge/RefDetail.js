@@ -42,15 +42,23 @@ const RefDetail = () => {
   const fetchInventory = async () => {
     try {
       setLoading(true);
-      // 사용자별 인벤토리 식별자 확보 (비로그인 시 Default ID: 1)
       const userInfo = await AsyncStorage.getItem('userInfo');
-      let targetInvenId = 1;
+      console.log("1. AsyncStorage 원본 데이터:", userInfo); // 추가할 로그 1
 
+      let targetInvenId;
       if (userInfo) {
         const parsed = JSON.parse(userInfo);
-        // 로그인 시 저장된 inven_id를 사용.
-        targetInvenId = parsed.inven_id || 1; 
+        targetInvenId = parsed.inven_id; 
+        console.log("2. 파싱된 inven_id 값:", targetInvenId); // 추가할 로그 2
       }
+
+      if (!targetInvenId) {
+        console.log('[RefDetail] 내 ID를 찾지 못해 1번 냉장고를 조회합니다.');
+        targetInvenId = 1;
+      }
+      
+      console.log("3. 최종 API 호출용 ID:", targetInvenId); // 추가할 로그 3
+      
 
       console.log(`[RefDetail] ${targetInvenId}번 냉장고 데이터 불러오기`);
 

@@ -103,63 +103,54 @@ def save_multiple_ingredients(
                 })
                 continue
 
-            # DB에 저장된 한글 식재료명 및 카테고리 추출
             real_item_name = pantry_item.ingredient_name 
             db_category = pantry_item.category
 
-            # 2. 보관 방식 코드 변환
-            # 프론트에서 온 "0", "1", "2"를 AI가 인식할 수 있는 "실온", "냉장", "냉동"으로 매핑
             mapped_condition = STORAGE_MAP.get(str(item.storage_type), "냉장")
 
-            # 3. AI 유통기한 예측 모델 호출 (tikkle_oracle 사용)
-            # 숫자 ID가 아닌 '진짜 이름'과 '카테고리', '진짜 보관 상태'를 전달하여 정확도 확보
             predicted_days = tikkle_oracle.calculate_expiry(
                 item_name=real_item_name,
                 db_category=db_category,
                 storage_type=mapped_condition
             )
             
-            # 4. 실제 유통기한(d_days) 계산 (구매일 + 예측 유통기한 일수)
             purchase_d = item.phurchase_date if item.phurchase_date else date.today()
             calculated_d_days = purchase_d + timedelta(days=predicted_days)
 
-            # 5. DB Insert 객체 생성 (RefIngredients 테이블)
-            new_ref_ingredient = fridge_models.RefIngredients(
-                inven_id=item.inven_id,
-                ingredient_id=pantry_item.ingredient_id,
-                storage_type=str(item.storage_type),
-                d_days=calculated_d_days,  # AI가 계산한 최종 날짜 삽입
-                quantity=item.quantity,
-                phurchase_date=purchase_d
-            )
-            
-            db.add(new_ref_ingredient)
+            # [수정] 개별 트랜잭션(SAVEPOINT)을 생성하여 DB 제약조건 위반 여부를 즉시 확인합니다.
+            with db.begin_nested():
+                # 5. DB Insert 객체 생성 (RefIngredients 테이블)
+                new_ref_ingredient = fridge_models.RefIngredients(
+                    inven_id=item.inven_id,
+                    ingredient_id=pantry_item.ingredient_id,
+                    storage_type=str(item.storage_type),
+                    d_days=calculated_d_days,  
+                    quantity=item.quantity,
+                    phurchase_date=purchase_d
+                )
+                db.add(new_ref_ingredient)
 
-            # ========================================================
-            # [추가] PhurchaseInfo 테이블에 구매 이력 저장 로직
-            # ========================================================
-            new_purchase_record = fridge_models.PhurchaseInfo(
-                # JSON 형태로 원문 품목명 저장
-                raw_item_name={"display_name": item.ingredient_name}, 
-                matched_ingredient_id=pantry_item.ingredient_id,
-                quantity_bill=item.quantity,
+                # [추가] PhurchaseInfo 테이블에 구매 이력 저장 로직
+                new_purchase_record = fridge_models.PhurchaseInfo(
+                    inven_id=item.inven_id,
+                    raw_item_name={"display_name": item.ingredient_name}, 
+                    matched_ingredient_id=pantry_item.ingredient_id,
+                    quantity_bill=item.quantity,
+                    after_price=item.after_price, 
+                    phurchase_date=purchase_d
+                )
+                db.add(new_purchase_record)
                 
-                # [수정 포인트] hasattr 체크 대신 item에서 직접 가져옵니다.
-                # 스키마에 필드를 추가했다면 item.after_price로 바로 접근 가능합니다.
-                after_price=item.after_price, 
-                
-                phurchase_date=purchase_d
-            )
-            db.add(new_purchase_record)
-            # =======================================================
-
+                # 메모리에 올린 객체를 실제 DB에 밀어 넣어 외래키 등의 제약조건 에러를 여기서 캐치합니다.
+                db.flush()
 
             saved_count += 1
 
         except Exception as e:
+            # 개별 데이터 저장 중 에러가 발생해도, 해당 항목만 실패 처리되고 전체 서버는 죽지 않습니다.
             errors.append({
                 "ingredient_id": item.ingredient_id, 
-                "error": str(e)
+                "error": f"DB 저장 실패(inven_id 등 확인 필요): {str(e)}"
             })
 
     # 전체 트랜잭션 처리 (부분 실패 허용 구조)
@@ -173,7 +164,6 @@ def save_multiple_ingredients(
                 detail=f"DB 저장 중 치명적 오류가 발생했습니다: {str(e)}"
             )
 
-    # 응답 결과 반환
     if errors and saved_count == 0:
         return {"status": "error", "message": "모든 항목 저장에 실패했습니다.", "errors": errors}
     elif errors:
@@ -399,16 +389,10 @@ def get_spending_summary(inven_id: int, db: Session = Depends(get_db)):
     today = date.today()
     first_day_of_month = date(today.year, today.month, 1)
 
-    # 1. 내 냉장고(inven_id)에 현재 들어있는 재료 ID 목록만 중복 없이 추출 (서브쿼리)
-    my_ingredient_ids = db.query(fridge_models.RefIngredients.ingredient_id)\
-        .filter(fridge_models.RefIngredients.inven_id == inven_id)\
-        .distinct().subquery()
-
-    # 2. 위에서 뽑은 ID 목록에 포함되면서 + 이번 달에 구매한 이력만 합산
-    # 이렇게 하면 RefIngredients와 직접 JOIN하지 않기 때문에 수량만큼 배수로 늘어나는 버그가 사라짐ㄴ.
+    # 내 냉장고(inven_id)로 찍힌 이번 달 영수증 합계만 계산
     total_spent = db.query(func.sum(fridge_models.PhurchaseInfo.after_price))\
         .filter(
-            fridge_models.PhurchaseInfo.matched_ingredient_id.in_(my_ingredient_ids),
+            fridge_models.PhurchaseInfo.inven_id == inven_id,
             fridge_models.PhurchaseInfo.phurchase_date >= first_day_of_month
         ).scalar() or 0
 

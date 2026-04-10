@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
 import apiClient from '../../common/api/api_client'; // 공통 API 클라이언트
@@ -32,7 +33,7 @@ const RecipeScreen = () => {
   const [loading, setLoading] = useState(true);
   const [recipes, setRecipes] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [invenId, setInvenId] = useState(1);
+  const [invenId, setInvenId] = useState(null);
 
   /**
    * buildInputStock: 서버 응답 데이터를 AI 모델 입력 규격(Dict)으로 변환
@@ -58,8 +59,23 @@ const RecipeScreen = () => {
     try {
       setLoading(true);
 
-      // 1) 실제 냉장고 재고 조회
-      const inventoryResult = await apiClient.get(apiClient.urls.FRIDGE.GET_INVENTORY(1));
+      // 1) AsyncStorage에서 현재 유저의 진짜 냉장고 ID 확보
+      const userInfoStr = await AsyncStorage.getItem('userInfo');
+      let targetInvenId = 1; // 기본값
+
+      if (userInfoStr) {
+        const userInfo = JSON.parse(userInfoStr);
+        // 생성 직후라면 userInfo에 담긴 inven_id를 사용
+        if (userInfo.inven_id) {
+          targetInvenId = userInfo.inven_id;
+          setInvenId(targetInvenId); // 페이지 상태 업데이트
+        }
+      }
+
+      console.log(`[Recipe] ${targetInvenId}번 냉장고 기준으로 추천을 시작합니다.`);
+
+      // 2) 실제 냉장고 재고 조회 (하드코딩된 1 제거 및 동적 ID 사용)
+      const inventoryResult = await apiClient.get(apiClient.urls.FRIDGE.GET_INVENTORY(targetInvenId));
       console.log('[1] inventory raw =', inventoryResult);
 
       const inventoryList =
@@ -71,11 +87,11 @@ const RecipeScreen = () => {
 
       console.log('[2] inventory list =', inventoryList);
 
-      // 2) 추천용 input_stock 변환
+      // 3) 추천용 input_stock 변환
       const input_stock = buildInputStock(inventoryList);
       console.log('[3] input_stock =', input_stock);
 
-      // 3) 추천 API 호출
+      // 4) 추천 API 호출
       const result = await apiClient.post(apiClient.urls.FRIDGE.RECOMMEND_RECIPE, {
         input_stock,
         top_k: 5,
@@ -86,15 +102,19 @@ const RecipeScreen = () => {
       setRecipes(result?.recipes || []);
       setSelectedIndex(0);
     } catch (error) {
-      console.log('[ERROR] fetchRecommendations:', error);
-      console.log('[ERROR] detail:', error?.response?.data?.detail);
-      console.log('[ERROR] status:', error?.response?.status);
-      console.log('[ERROR] data:', error?.response?.data);
+      console.error('[ERROR] fetchRecommendations:', error);
+      // 상세 에러 로깅
+      if (error.response) {
+        console.log('[ERROR Detail]', error.response.data);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * 화면 진입 시 실행
+   */
   useEffect(() => {
     fetchRecommendations();
   }, []);

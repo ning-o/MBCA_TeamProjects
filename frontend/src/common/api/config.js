@@ -16,6 +16,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     SIGNUP: '/api/auth/signup',
     LOGIN: '/api/auth/login',
+    DELETE_USER: '/api/auth/delete_user/',
 },
 
 //  [냉장고 관리 도메인]

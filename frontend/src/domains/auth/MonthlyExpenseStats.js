@@ -25,6 +25,7 @@ const MonthlyExpenseStats = () => {
   const [isManageModalVisible, setIsManageModalVisible] = useState(false);
   const [showHint, setShowHint] = useState(true);
   const translateY = useRef(new Animated.Value(0)).current;
+  const [myInvenId, setMyInvenId] = useState(null); // 에러 방지를 위해 필요한 상태만 남김
 
   const [activeTab, setActiveTab] = useState('list');
   const [startMonth, setStartMonth] = useState('2026-01');
@@ -62,21 +63,24 @@ const MonthlyExpenseStats = () => {
   }, [showHint]);
   
   useEffect(() => {
-    const getMyId = async () => {
-      try {
-        const userInfo = await AsyncStorage.getItem('userInfo');
-        if (userInfo) {
-          const parsed = JSON.parse(userInfo);
-          if (parsed.inven_id) {
-            setMyInvenId(parsed.inven_id);
-          }
+  const getMyId = async () => {
+    try {
+      const userInfo = await AsyncStorage.getItem('userInfo');
+      if (userInfo) {
+        const parsed = JSON.parse(userInfo);
+        const newId = parsed.inven_id;
+        
+        // [수정] 값이 존재하고 기존과 다를 때만 업데이트
+        if (newId && newId !== myInvenId) {
+          setMyInvenId(newId);
         }
-      } catch (e) {
-        console.error("ID 로드 실패:", e);
       }
-    };
-    getMyId();
-  }, []);
+    } catch (e) {
+      console.error("ID 로드 실패:", e);
+    }
+  };
+  getMyId();
+}, [myInvenId]);
 
   const handleOpenManageModal = () => {
     if (showHint) setShowHint(false); 
@@ -84,35 +88,38 @@ const MonthlyExpenseStats = () => {
   };
 
   const handleUserExit = async () => {
-    const userInfo = await AsyncStorage.getItem('userInfo');
-    if (userInfo) {
-        const parsed = JSON.parse(userInfo);
-        try {
-          const response = await apiClient.post(`/api/auth/delete_user`, {user_id: parsed.id });
-          if (response && response.status === "success" && response.data?.length > 0) {
-              await AsyncStorage.clear(); 
+  const userInfo = await AsyncStorage.getItem('userInfo');
+  if (!userInfo) return;
+
+  const parsed = JSON.parse(userInfo);
+  
+  try {
+    // 하드코딩 대신 apiClient와 config 방식 사용
+    const response = await apiClient.post(apiClient.urls.AUTH.DELETE_USER, {
+      user_id: parsed.id 
+    });
+
+    if (response.status === "success") {
+      await AsyncStorage.clear(); 
+      Alert.alert("탈퇴 완료", "그동안 이용해 주셔서 감사합니다.", [
+        {
+          text: "확인",
+          onPress: () => {
+            navigation.dispatch(
+              CommonActions.reset({
+                index: 0,
+                routes: [{ name: 'Login' }], 
+              })
+            );
           }
-        } catch (error) {
-            console.error("회원탈퇴 실패:", error);
-            return;
         }
-        
-        Alert.alert("탈퇴 완료", "그동안 이용해 주셔서 감사합니다.", [
-          {
-              text: "확인",
-              onPress: () => {
-                  // 로그인 화면으로 스택 초기화하며 이동
-                  navigation.dispatch(
-                      CommonActions.reset({
-                          index: 0,
-                          routes: [{ name: 'Login' }], 
-                      })
-                  );
-              }
-          }
       ]);
     }
-  };
+  } catch (error) {
+    console.error("회원탈퇴 실패:", error);
+    // 에러 처리는 api_client.js 인터셉터에서 자동으로 팝업을 띄워줍니다.
+  }
+};
 
   const chartData = Object.entries(monthlyTotals)
     .sort()

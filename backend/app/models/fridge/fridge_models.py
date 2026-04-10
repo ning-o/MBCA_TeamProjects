@@ -78,6 +78,7 @@ class PhurchaseInfo(Base):
     __tablename__ = 'phurchase_info'
     
     phurchase_id = Column(Integer, primary_key=True, autoincrement=True)
+    inven_id = Column(Integer, ForeignKey('refrigerator.inven_id'), nullable=False)
     raw_item_name = Column(JSON, nullable=False)
     matched_ingredient_id = Column(Integer, ForeignKey('pantry.ingredient_id'), nullable=True)
     quantity_bill = Column(Integer, nullable=False)

@@ -169,31 +169,57 @@ class UserDeleteRequest(BaseModel):
 @router.post("/delete_user/")
 async def delete_user(request_data: UserDeleteRequest, db: Session = Depends(get_db)):
     """
-    유저 삭제 (Post Body 방식)
-    """ 
-    
-    # 2. 전달받은 객체에서 user_id 추출
+    [완벽한 회원탈퇴] 유저 및 연관된 모든 하위 데이터를 순차적으로 즉시 삭제합니다.
+    """
     user_id = request_data.user_id
-    
-    query = text("""
-        DELETE FROM users
-        WHERE id = :user_id
-    """)
+
+    # 1. 탈퇴할 유저가 존재하는지 확인
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return {"status": "fail", "message": "해당 유저가 존재하지 않습니다."}
 
     try:
-        # 3. 쿼리 실행 및 커밋
-        result = db.execute(query, {"user_id": user_id})
-        db.commit()
+        # ---------------------------------------------------------
+        # [STEP 1] 냉장고 도메인 데이터 청소
+        # ---------------------------------------------------------
+        # 유저가 생성한 모든 냉장고를 찾아 하위 데이터를 모두 삭제
+        fridges = db.query(fridge_models.Refrigerator).filter(fridge_models.Refrigerator.user_id == user_id).all()
+        for fridge in fridges:
+            inven_id = fridge.inven_id
+            db.query(fridge_models.PhurchaseInfo).filter(fridge_models.PhurchaseInfo.inven_id == inven_id).delete(synchronize_session=False)
+            db.query(fridge_models.RefIngredients).filter(fridge_models.RefIngredients.inven_id == inven_id).delete(synchronize_session=False)
+            db.query(fridge_models.RefAdmin).filter(fridge_models.RefAdmin.inven_id == inven_id).delete(synchronize_session=False)
+            
+        # 하위 데이터 삭제 완료 후 냉장고 본체 일괄 삭제
+        db.query(fridge_models.Refrigerator).filter(fridge_models.Refrigerator.user_id == user_id).delete(synchronize_session=False)
 
-        if result.rowcount == 0:
-            return {"status": "fail", "message": "해당 유저가 존재하지 않습니다."}
+        # ---------------------------------------------------------
+        # [STEP 2] 공통 도메인 (절약 내역) 데이터 청소
+        # ---------------------------------------------------------
+        from app.models.common import TotalSaving
+        db.query(TotalSaving).filter(TotalSaving.user_id == user_id).delete(synchronize_session=False)
+
+        # ---------------------------------------------------------
+        # [STEP 3] 구독 도메인 데이터 청소
+        # ---------------------------------------------------------
+        from app.models.subs.subs_models import UserAmount, SubscriptionsUser
+        db.query(UserAmount).filter(UserAmount.user_id == user_id).delete(synchronize_session=False)
+        db.query(SubscriptionsUser).filter(SubscriptionsUser.user_id == user_id).delete(synchronize_session=False)
+
+        # ---------------------------------------------------------
+        # [STEP 4] 마지막으로 유저(User) 본체 삭제
+        # ---------------------------------------------------------
+        db.query(User).filter(User.id == user_id).delete(synchronize_session=False)
+        
+        # 모든 삭제 쿼리를 DB에 반영
+        db.commit()
 
         return {
             "status": "success",
-            "message": f"User {user_id} deleted successfully."
+            "message": f"User {user_id} and all related data deleted successfully."
         }
 
     except Exception as e:
         db.rollback()
-        print(f"Database Error: {e}")
-        raise HTTPException(status_code=500, detail="유저 삭제중 오류가 발생했습니다.")
+        print(f"Database Error during cascading delete: {e}")
+        raise HTTPException(status_code=500, detail="회원 탈퇴 처리 중 시스템 오류가 발생했습니다.")
