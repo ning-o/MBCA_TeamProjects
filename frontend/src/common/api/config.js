@@ -8,7 +8,7 @@
 import Constants from 'expo-constants';
 
 // .env에 설정된 IP를 엑스포 실행 시점에 자동으로 주입받음
-const MY_CURRENT_IP = '54.116.121.237';
+const MY_CURRENT_IP = Constants.expoConfig?.hostUri?.split(':')[0] || 'localhost';
 
 const BASE_URL = `http://${MY_CURRENT_IP}:8000`;
 
@@ -16,19 +16,21 @@ export const API_ENDPOINTS = {
   AUTH: {
     SIGNUP: '/api/auth/signup',
     LOGIN: '/api/auth/login',
+    DELETE_USER: '/api/auth/delete_user/',
 },
 
 //  [냉장고 관리 도메인]
   FRIDGE: { // [카테고리 이름]
     GET_INVENTORY: (invenId) => `/api/fridge/inventory/${invenId}`,
-    GET_DETAILS: (invenId) => `/api/fridge/${invenId}`,
+    GET_DETAILS: (invenId) => `/api/fridge/details/${invenId}`,
     UPDATE_REFRIGERATOR: (invenId) => `/api/fridge/refrigerator/${invenId}`,
     GET_SPENDING_SUMMARY: (invenId) => `/api/fridge/spending-summary/${invenId}`,
     OCR: '/api/fridge/ocr',
     SAVE_ITEMS: '/api/fridge/save-items',
     RECOMMEND_RECIPE: '/api/fridge/recommend',
     COMPLETE_COOKING: '/api/fridge/complete-cooking',
-    CREATE_REFRIGERATOR: '/api/fridge/refrigerator'
+    CREATE_REFRIGERATOR: '/api/fridge/refrigerator',
+    INVITE_ROOMMATE: '/api/fridge/invite-roommate',
   },
 //  [구독 관리 도메인]
   SUBS: {

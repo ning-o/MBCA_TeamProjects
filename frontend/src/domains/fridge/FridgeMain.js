@@ -18,6 +18,7 @@ const FridgeMainScreen = ({ route }) => {
 
   const [showHint, setShowHint] = useState(true);
   const translateY = useRef(new Animated.Value(0)).current;
+  const invenId = route?.params?.invenId;
 
   useEffect(() => {
     if (showHint) {
@@ -445,9 +446,22 @@ const FridgeMainScreen = ({ route }) => {
                   </View>
                 </View>
 
-                <TouchableOpacity style={styles.modalMenuItem}>
+                <TouchableOpacity
+                  style={styles.modalMenuItem}
+                  onPress={() => {
+                    const targetInvenId = invenId || myInvenId;
+
+                    if (!targetInvenId) {
+                      Alert.alert('오류', '냉장고 정보를 찾을 수 없습니다.');
+                      return;
+                    }
+
+                    setIsManageModalVisible(false);
+                    navigation.navigate('InviteRoommate', { invenId: targetInvenId });
+                  }}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Users size={18} color="#1E293B" style={{marginRight: 8}}/>
+                    <Users size={18} color="#1E293B" style={{ marginRight: 8 }} />
                     <Text style={styles.menuLabel}>동거인 초대</Text>
                   </View>
                   <ChevronRight size={18} color="#94A3B8" />

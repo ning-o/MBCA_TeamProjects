@@ -11,55 +11,72 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Header from '../../common/components/Header';
 import Footer from '../../common/components/Footer';
-import apiClient from '../../common/api/api_client'; // 공통 API 클라이언트
+import apiClient from '../../common/api/api_client';
 
 const { height } = Dimensions.get('window');
 
-const getDifficultyText = (value) =>{
+const getDifficultyText = (value) => {
   const num = Number(value);
 
-  if(num ===1) return "쉬움";
-  if(num ===2) return "보통";
-  if(num ===3) return "어려움";
+  if (num === 1) return '쉬움';
+  if (num === 2) return '보통';
+  if (num === 3) return '어려움';
 
   return value ?? '-';
-}
+};
 
 const RecipeScreen = () => {
   const navigation = useNavigation();
   const [loading, setLoading] = useState(true);
   const [recipes, setRecipes] = useState([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [invenId, setInvenId] = useState(1);
+  const [invenId, setInvenId] = useState(null);
 
   /**
-   * buildInputStock: 서버 응답 데이터를 AI 모델 입력 규격(Dict)으로 변환
+   * buildInputStock:
+   * inventory API 응답을 추천 모델 입력 형식({재료명: 남은유통기한일수})으로 변환
    */
   const buildInputStock = (inventoryData) => {
     const stock = {};
 
     (inventoryData || []).forEach((item) => {
       const name = item.item_name || item.name || item.ingredient_name;
-      const quantity = item.quantity ?? item.amount ?? 1;
+      const daysLeft = item.dday ?? item.days_left ?? 999;
 
       if (!name) return;
-      stock[name] = quantity;
+      stock[name] = daysLeft;
     });
 
     return stock;
   };
 
   /**
-   * fetchRecommendations: apiClient 적용
+   * 추천 목록 조회
    */
   const fetchRecommendations = async () => {
     try {
       setLoading(true);
 
-      // 1) 실제 냉장고 재고 조회
-      const inventoryResult = await apiClient.get(apiClient.urls.FRIDGE.GET_INVENTORY(1));
+      const userInfoStr = await AsyncStorage.getItem('userInfo');
+      let targetInvenId = 1;
+
+      if (userInfoStr) {
+        const userInfo = JSON.parse(userInfoStr);
+        if (userInfo.inven_id) {
+          targetInvenId = userInfo.inven_id;
+        }
+      }
+
+      setInvenId(targetInvenId);
+
+      console.log(`[Recipe] ${targetInvenId}번 냉장고 기준으로 추천을 시작합니다.`);
+
+      const inventoryResult = await apiClient.get(
+        apiClient.urls.FRIDGE.GET_INVENTORY(targetInvenId)
+      );
       console.log('[1] inventory raw =', inventoryResult);
 
       const inventoryList =
@@ -71,25 +88,25 @@ const RecipeScreen = () => {
 
       console.log('[2] inventory list =', inventoryList);
 
-      // 2) 추천용 input_stock 변환
       const input_stock = buildInputStock(inventoryList);
       console.log('[3] input_stock =', input_stock);
+      console.log('[3-1] inventoryList sample =', inventoryList);
 
-      // 3) 추천 API 호출
       const result = await apiClient.post(apiClient.urls.FRIDGE.RECOMMEND_RECIPE, {
         input_stock,
         top_k: 5,
       });
 
-      console.log('[4] recommend result =', result);
+      console.log('[4] recommend result =', JSON.stringify(result, null, 2));
 
       setRecipes(result?.recipes || []);
       setSelectedIndex(0);
     } catch (error) {
-      console.log('[ERROR] fetchRecommendations:', error);
-      console.log('[ERROR] detail:', error?.response?.data?.detail);
-      console.log('[ERROR] status:', error?.response?.status);
-      console.log('[ERROR] data:', error?.response?.data);
+      console.error('[ERROR] fetchRecommendations:', error);
+      if (error.response) {
+        console.log('[ERROR Detail]', error.response.data);
+      }
+      setRecipes([]);
     } finally {
       setLoading(false);
     }
@@ -137,7 +154,7 @@ const RecipeScreen = () => {
     const missingText =
       missing.length > 0 ? missing.join(', ') : '추가 재료 없이 바로 조리 가능';
 
-    return `현재 유통기한이 많이 남지 않은 ${matchedText}등의 재료를 바로 활용할 수 있고, 부족한 재료는 ${missingText}입니다. 조리시간은 약 ${selectedRecipe.cooking_time ?? '-'}분 정도이며 난이도는 ${difficultyText}입니다.`;
+    return `현재 냉장고에 있는 ${matchedText}를 바로 활용할 수 있고, 부족한 재료는 ${missingText}입니다. 조리시간은 약 ${selectedRecipe.cooking_time ?? '-'}분 정도이며 난이도는 ${difficultyText}입니다.`;
   }, [selectedRecipe]);
 
   const recipeSteps = useMemo(() => {
@@ -158,6 +175,7 @@ const RecipeScreen = () => {
 
   const tags = useMemo(() => {
     if (!selectedRecipe) return [];
+
     return [
       selectedRecipe.category ? `#${selectedRecipe.category}` : '#추천메뉴',
       selectedRecipe.cooking_time ? `#${selectedRecipe.cooking_time}분` : '#시간미정',
@@ -165,56 +183,83 @@ const RecipeScreen = () => {
     ];
   }, [selectedRecipe]);
 
-  const handleCookComplete = async () => {
-  const selectedRecipe = recipes[selectedIndex];
-  if (!selectedRecipe) return;
+  const handleComplete = async () => {
+    const recipe = recipes[selectedIndex];
 
-  Alert.alert(
-    "요리 완료",
-    `'${selectedRecipe.recipe_name || selectedRecipe.menu_name}' 요리를 완료하셨습니까?`,
-    [
-      { text: "취소", style: "cancel" },
-      {
-        text: "완료",
-        onPress: async () => {
-          try {
-            const payload = {
-              inven_id: invenId,
-              recipe_id: selectedRecipe.recipe_id || selectedRecipe.id || 0,
-              servings: 1,
-            };
+    if (!recipe) {
+      Alert.alert('오류', '선택된 레시피가 없습니다.');
+      return;
+    }
 
-            console.log("[요리완료] 요청 payload:", payload);
+    const realInvenId = invenId;
+    const realRecipeId = recipe.recipe_id;
 
-            const response = await apiClient.post(
-              apiClient.urls.FRIDGE.COMPLETE_COOKING,
-              payload
-            );
+    if (!realInvenId) {
+      Alert.alert('오류', '현재 냉장고 정보를 찾을 수 없습니다.');
+      return;
+    }
 
-            console.log("[요리완료] 응답:", response);
+    if (!realRecipeId) {
+      Alert.alert('오류', '레시피 ID를 찾을 수 없습니다.');
+      return;
+    }
 
-            Alert.alert(
-              "완료",
-              response?.message || "냉장고 업데이트 완료!",
-              [
-                {
-                  text: "확인",
-                  onPress: async () => {
-                    await fetchRecommendations();
-                    navigation.navigate("FridgeMain", { refresh: true });
+    Alert.alert(
+      '요리 완료',
+      `'${recipe.recipe_name}' 요리를 완료하셨습니까?\n현재는 1인분 기준으로 처리됩니다.`,
+      [
+        { text: '취소', style: 'cancel' },
+        {
+          text: '완료',
+          onPress: async () => {
+            try {
+              const payload = {
+                inven_id: realInvenId,
+                recipe_id: realRecipeId,
+                servings: 1,
+              };
+
+              console.log('[COMPLETE] 요청 payload:', payload);
+
+              const response = await apiClient.post(
+                apiClient.urls.FRIDGE.COMPLETE_COOKING,
+                payload
+              );
+
+              console.log('[COMPLETE] 응답:', response);
+
+              const savedAmount = response?.added_saving?.toLocaleString?.() || '0';
+
+              Alert.alert(
+                '절약 성공!',
+                `이번 요리로 총 ${savedAmount}원을 절약하셨습니다.`,
+                [
+                  {
+                    text: '확인',
+                    onPress: async () => {
+                      await fetchRecommendations();
+                      navigation.navigate('FridgeMain', {
+                        invenId: realInvenId,
+                        refresh: true,
+                      });
+                    },
                   },
-                },
-              ]
-            );
-          } catch (error) {
-            console.log("[요리완료] 오류:", error);
-            Alert.alert("오류", "요리 완료 처리 중 오류가 발생했습니다.");
-          }
+                ]
+              );
+            } catch (error) {
+              console.error('[COMPLETE] 통신 실패:', error);
+              console.error('[COMPLETE] 상세:', error?.response?.data);
+
+              Alert.alert(
+                '요리완료 실패',
+                error?.response?.data?.detail || error?.message || '처리 중 오류가 발생했습니다.'
+              );
+            }
+          },
         },
-      },
-    ]
-  );
-};
+      ]
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -331,7 +376,7 @@ const RecipeScreen = () => {
                 ))}
               </View>
 
-              <TouchableOpacity style={styles.completeButton} onPress={handleCookComplete}>
+              <TouchableOpacity style={styles.completeButton} onPress={handleComplete}>
                 <Text style={styles.completeButtonText}>요리 완료</Text>
               </TouchableOpacity>
             </View>

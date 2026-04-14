@@ -8,6 +8,7 @@ import OCRConfirmScreen from './OCRConfirmScreen';
 // import RecipeList from './RecipeList';
 import CustomCameraScreen from './FridgeComponents/CustomCameraScreen';
 import SeasonalRecommendFood from './SeasonalRecommendFood';
+import InviteRoommateScreen from './InviteRoommateScreen';
 const Stack = createStackNavigator();
 
 const FridgeRouter = () => {
@@ -20,6 +21,7 @@ const FridgeRouter = () => {
       <Stack.Screen name="OCRConfirm" component={OCRConfirmScreen} />
       <Stack.Screen name="CustomCamera" component={CustomCameraScreen} />
       <Stack.Screen name="SeasonalRecommendFood" component={SeasonalRecommendFood}/>
+      <Stack.Screen name="InviteRoommate" component={InviteRoommateScreen}options={{ title: '동거인 초대' }}/>
     </Stack.Navigator>
   );
 };

@@ -19,6 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 import Header from '../../common/components/Header';
 import apiClient from '../../common/api/api_client';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import BASE_URL, { API_ENDPOINTS } from '../../common/api/config';
+import axios from 'axios';
 
 /**
  * [Android 전용 설정]
@@ -127,57 +129,79 @@ const OCRConfirmScreen = ({ route }) => {
    * - 특징: apiClient 전역 설정을 이용하되, 파일 전송을 위해 Content-Type만 개별 Override함
    */
   const runOCR = async () => {
-    try {
-      setLoading(true);
+  try {
+    setLoading(true);
 
-      console.log('[OCR] photoUri:', photoUri);
+    console.log('[OCR] photoUri:', photoUri);
 
-      const fileName = getFileNameFromUri(photoUri);
-      const mimeType = getMimeTypeFromUri(photoUri);
-
-      // 파일 데이터 포장 (Multipart 규격)
-      const formData = new FormData();
-      formData.append('file', {
-        uri: photoUri,
-        name: fileName,
-        type: mimeType,
-      });
-
-      console.log('[OCR] 요청 URL:', apiClient.urls.FRIDGE.OCR);
-
-      // API 호출: apiClient 인터셉터(JWT, 공통 에러 처리) 로직이 자동으로 적용됨
-      const data = await apiClient.post(apiClient.urls.FRIDGE.OCR, formData, {
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'multipart/form-data', // 파일 전송을 위한 헤더 설정
-        },
-      });
-
-      console.log('[OCR] response data:', data);
-
-      const normalizedItems = normalizeParsedItems(data);
-
-      if (!normalizedItems.length) {
-        Alert.alert(
-          '안내',
-          'OCR은 완료되었지만 추출된 품목이 없습니다. 직접 수정해주세요.'
-        );
-        setItems([{ rawName: '', matchedName: '', quantity: '1', price: '' }]);
-        setExpandedIndex(0);
-        return;
-      }
-
-      setItems(normalizedItems);
-      setExpandedIndex(null);
-    } catch (error) {
-      console.error('[OCR] 오류:', error);
-      Alert.alert('OCR 오류', error.message || '이미지 분석 중 문제가 발생했습니다.');
+    if (!photoUri) {
+      Alert.alert('오류', '촬영된 이미지가 없습니다.');
       setItems([{ rawName: '', matchedName: '', quantity: '1', price: '' }]);
       setExpandedIndex(0);
-    } finally {
-      setLoading(false);
+      return;
     }
-  };
+
+    const fileName = getFileNameFromUri(photoUri);
+    const mimeType = getMimeTypeFromUri(photoUri);
+
+    const formData = new FormData();
+    formData.append('file', {
+      uri: photoUri,
+      name: fileName,
+      type: mimeType,
+    });
+
+    const requestUrl = `${BASE_URL}${API_ENDPOINTS.FRIDGE.OCR}`;
+
+    console.log('[OCR] BASE_URL:', BASE_URL);
+    console.log('[OCR] endpoint:', API_ENDPOINTS.FRIDGE.OCR);
+    console.log('[OCR] 요청 URL:', requestUrl);
+    console.log('[OCR] fileName:', fileName);
+    console.log('[OCR] mimeType:', mimeType);
+
+    const response = await axios.post(requestUrl, formData, {
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'multipart/form-data',
+      },
+      timeout: 15000,
+    });
+
+    const data = response.data;
+    console.log('[OCR] response data:', data);
+
+    const normalizedItems = normalizeParsedItems(data);
+
+    if (!normalizedItems.length) {
+      Alert.alert(
+        '안내',
+        'OCR은 완료되었지만 추출된 품목이 없습니다. 직접 수정해주세요.'
+      );
+      setItems([{ rawName: '', matchedName: '', quantity: '1', price: '' }]);
+      setExpandedIndex(0);
+      return;
+    }
+
+    setItems(normalizedItems);
+    setExpandedIndex(null);
+  } catch (error) {
+    console.error('[OCR] 오류 전체:', error);
+    console.error('[OCR] error.message:', error?.message);
+    console.error('[OCR] error.response?.status:', error?.response?.status);
+    console.error('[OCR] error.response?.data:', error?.response?.data);
+    console.error('[OCR] error.config?.url:', error?.config?.url);
+
+    Alert.alert(
+      'OCR 오류',
+      error?.response?.data?.detail || error?.message || '이미지 분석 중 문제가 발생했습니다.'
+    );
+
+    setItems([{ rawName: '', matchedName: '', quantity: '1', price: '' }]);
+    setExpandedIndex(0);
+  } finally {
+    setLoading(false);
+  }
+};
 
   /**
    * [UI/UX] 토글 제어
