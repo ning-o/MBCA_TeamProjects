@@ -43,7 +43,7 @@
 2. **끊김 없는 경험 (Seamless Connection)**: 추천 결과에서 '좋아요' 클릭 시, 현재 위치 기반 근처 식당 지도(Map) 및 길찾기 딥링크까지 한 번에 연결.
 
 
-## My Role & Contributions (Frontend)
+## 내 역할
 
 프론트엔드 전담 개발자로서 UI/UX 구현 및 데이터 바인딩을 주도했습니다.
 
@@ -62,66 +62,6 @@
 3. **Strict Protocol Compliance**: "어떻게 만들었느냐"는 각자의 자율에 맡기되, "무엇을 전달하느냐(Deliverables)"는 합의된 API 명세서와 코드 컨벤션을 엄격히 준수.
 4. **Git Flow & Code Review**: `main` - `develop` - `feature` 브랜치 전략을 통해 단순 병합이 아닌 코드 리뷰와 충돌 해결 중심의 협업 진행.
 
-
-## Milestones & R&R
-
-<details>
-
-<summary><b>Phase 1: 인증 시스템 및 데이터 파이프라인 연동</b></summary>
-
-<div markdown="1">
-
-- **[FE]** SignUp, SignIn 화면 완성 및 JWT 기반 인증 로직 연동
-- **[BE]** 1차 유저 스키마 확정 및 Auth API 엔드포인트 구현
-- **[DA]** 실제 메뉴 원천 데이터 크롤링 및 DB 적재
-
-</div>
-
-</details>
-
-<details>
-
-<summary><b>Phase 2: 컨텍스트 기반 추천 알고리즘 고도화</b></summary>
-
-<div markdown="1">
-
-- **[FE]** 기기 GPS 연동 및 실시간 날씨 기반 추천 UI 노출
-
-- **[BE]** 날씨 가중치(Score) 로직 반영 및 추천 엔진 고도화
-
-- **[DA]** 실시간 기상 정보 API 연동 및 데이터 라벨링 정교화
-
-</div>
-
-</details>
-
-<details>
-
-<summary><b>Phase 3: 인프라 구축 및 클라우드 배포</b></summary>
-
-<div markdown="1">
-
-- **[FE]** API Base URL 클라우드 서버 전환 및 통합 연동 테스트
-- **[BE]** AWS 인프라 셋업, DB 마이그레이션 및 CI/CD 환경 구축
-- **[DA]** 로컬 수집 스크립트 서버 환경 이관 및 자동화
-
-</div>
-
-</details>
-
-<details>
-
-<summary><b>Phase 4: 공간 정보 시스템(GIS) 및 라스트마일 연동</b></summary>
-
-<div markdown="1">
-
-- **[FE]** Map SDK 이식 및 카카오/네이버 지도 딥링크 길찾기 연동
-- **[BE]** 위경도 좌표 기반 반경 내 식당 필터링 API 구현
-- **[DA]** 주변 식당 데이터 수급 (Kakao/Google Place API)
-
-</div>
-
-</details>
 
 <br>
 
