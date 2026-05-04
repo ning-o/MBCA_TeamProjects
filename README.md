@@ -28,16 +28,16 @@
 <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=Git&logoColor=white"> <img src="https://img.shields.io/badge/Github-181717?style=for-the-badge&logo=Github&logoColor=white"> <img src="https://img.shields.io/badge/Figma-F24E1E?style=for-the-badge&logo=Figma&logoColor=white"> <img src="https://img.shields.io/badge/Notion-000000?style=for-the-badge&logo=Notion&logoColor=white">
 
 
-## Background & Solution
+## 기획 배경 및 차별
 
 
-### Pain Point
+### 문제점
 
 1. **결과 불신**: 기존 앱의 '광고성 랭킹'이나 단순 '랜덤 룰렛'은 사용자의 취향(맵기, 예산 등)을 무시함.
 2. **단절된 경험**: 메뉴를 추천받은 후, "그래서 어디로 가야 하지?"라는 2차 고민과 검색의 번거로움 발생.
 
 
-### Solution
+### 해결책
 
 1. **초개인화 알고리즘 (Hyper-Personalization)**: 사용자의 예산, 취향 데이터를 벡터화하여 분석. 랜덤이 아닌 취향 적합도가 가장 높은 '뾰족한' 메뉴 3가지 제안.
 2. **끊김 없는 경험 (Seamless Connection)**: 추천 결과에서 '좋아요' 클릭 시, 현재 위치 기반 근처 식당 지도(Map) 및 길찾기 딥링크까지 한 번에 연결.
@@ -47,12 +47,10 @@
 
 프론트엔드 전담 개발자로서 UI/UX 구현 및 데이터 바인딩을 주도했습니다.
 
-
 * **UI/UX 구현 및 개선**: Figma 기반의 모바일 앱 UI 구현 및 유저 편의성을 고려한 화면 설계.
 * **디바이스 GPS 연동**: 사용자 현재 위치(위경도 좌표) 수집 및 상태 관리 구현.
 * **API 데이터 바인딩**: 백엔드 RESTful API와 연동하여 사용자 인증(JWT), 메뉴 추천 결과 수신 및 화면 렌더링.
 * **지도 SDK 및 딥링크 연동**: 추천 메뉴 기반 주변 식당 마커 표시 및 외부 지도 앱(카카오내비/네이버맵) 길찾기 딥링크 이식 구현.
-
 
 
 ## 팀 프로젝트 목표
