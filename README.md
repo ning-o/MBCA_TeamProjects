@@ -29,7 +29,7 @@
 ### 협업 및 생산성 툴
 <img src="https://img.shields.io/badge/Git-F05032?style=for-the-badge&logo=Git&logoColor=white"> <img src="https://img.shields.io/badge/Github-181717?style=for-the-badge&logo=Github&logoColor=white"> <img src="https://img.shields.io/badge/Figma-F24E1E?style=for-the-badge&logo=Figma&logoColor=white"> <img src="https://img.shields.io/badge/Notion-000000?style=for-the-badge&logo=Notion&logoColor=white">
 
-첫 협업을 통한 툴 활용 능력 습득: 이전까지는 개인 작업 위주로 진행하여 협업 툴 사용이 낯설었으나, 이번 프로젝트를 통해 현업 수준의 워크플로우를 익히는 것을 주요 목표로 삼았습니다.
+이전까지는 개인 작업 위주로 진행하여 협업 툴 사용이 낯설었으나, 이번 프로젝트를 통해 현업 수준의 워크플로우를 익히는 것을 주요 목표로 삼았습니다.
 
 - Notion: 초기에는 단순 기록용으로만 생각하여 활용도가 낮았으나, 개발 과정에서 발생하는 소통 오류를 겪으며 API 명세서 관리와 칸반 보드를 통한 일정 동기화의 절대적인 필요성을 배웠습니다. 이후 모든 기획 변경 사항을 문서로 선행 관리하는 습관을 들였습니다.
 - Figma: 디자인 툴 사용법을 익히는 것에 그치지 않고, 개발 착수 전 UI/UX 컴포넌트를 미리 합의하는 과정이 불필요한 재작업을 얼마나 획기적으로 줄여주는지 직접 체감했습니다.
