@@ -86,4 +86,7 @@
 
 ## 실제 사용 모습
 
+<img width="3050" height="2599" alt="티끌_깃허브용" src="https://github.com/user-attachments/assets/16d5b7f5-3c9c-4186-af5e-f4d6a9048077" />
+
+
 
